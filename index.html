@@ -106,6 +106,7 @@
       console.error("Errore caricamento dati:", err);
     } finally {
       nascondiLoader();
+      
     }
   }
 
@@ -121,16 +122,29 @@
     container.appendChild(select);
   }
 
-  function aggiornaFiltri() {
-    const zoneUnique = [...new Set(locali.map(l => l.zona).filter(Boolean))];
-    creaDropdown("zonaFilter", "Zona", ["Più vicino a me", ...zoneUnique]);
-    const tipiUnique = [...new Set(locali.flatMap(l => l.tipo ? l.tipo.split("+") : []))];
-    creaDropdown("tipoFilter", "Tipo", tipiUnique);
-    const consUnique = [...new Set(locali.map(l => l.consigliatoDa || "—"))];
-    creaDropdown("consigliatoFilter", "Consigliato da", consUnique);
-    const gfUnique = [...new Set(locali.map(l => l.glutenFree || "—"))];
-    creaDropdown("glutenFilter", "Gluten free", gfUnique);
-  }
+ function aggiornaFiltri() {
+  // Uniforma i campi per sicurezza
+  locali = locali.map(l => ({
+    ...l,
+    zona: l.zona || l.Zona || "",
+    tipo: l.tipo || l.Tipo || "",
+    consigliatoDa: l.consigliatoDa || l.ConsigliatoDa || "",
+    glutenFree: l.glutenFree || l.GlutenFree || ""
+  }));
+
+  const zoneUnique = [...new Set(locali.map(l => l.zona).filter(Boolean))];
+  creaDropdown("zonaFilter", "Zona", ["Più vicino a me", ...zoneUnique]);
+
+  const tipiUnique = [...new Set(locali.flatMap(l => l.tipo ? l.tipo.split("+").map(t => t.trim()) : []))];
+  creaDropdown("tipoFilter", "Tipo", tipiUnique);
+
+  const consUnique = [...new Set(locali.map(l => l.consigliatoDa || "—"))];
+  creaDropdown("consigliatoFilter", "Consigliato da", consUnique);
+
+  const gfUnique = [...new Set(locali.map(l => l.glutenFree || "—"))];
+  creaDropdown("glutenFilter", "Gluten free", gfUnique);
+}
+
 
   async function filtra() {
     let zonaSel = document.getElementById("zonaFilter")?.value || "";
@@ -229,3 +243,4 @@
   </script>
 </body>
 </html>
+
