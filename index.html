@@ -16,26 +16,14 @@
     button { background: #ff7e5f; color: white; cursor: pointer; border: none; transition: 0.3s; }
     button:hover { background: #eb5757; }
     .list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; max-height: 70vh; overflow-y: auto; }
-    .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-    .card div { max-width: 220px; word-wrap: break-word; white-space: normal; }
+    .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: flex-start; flex-direction: row; }
+    .card div { max-width: 240px; word-wrap: break-word; white-space: normal; }
     .card a { color: #0077cc; text-decoration: none; }
     .actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
     .remove, .edit { border-radius: 50%; width: 30px; height: 30px; font-weight: bold; color: white; cursor: pointer; }
     .edit { background: #ffa500; }
     .remove { background: #ff4d4d; }
-
-    /* Dropdown multi-select con checkbox */
-    .dropdown { position: relative; display: inline-block; }
-    .dropdown-btn {
-      padding: 10px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer; min-width: 180px;
-    }
-    .dropdown-content {
-      display: none; position: absolute; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 100; max-height: 240px; overflow-y: auto; min-width: 220px;
-    }
-    .dropdown.show .dropdown-content { display: block; }
-    .dropdown-content label { display: block; cursor: pointer; margin: 4px 0; }
-
+    .comment { background: #ff9966; border: none; border-radius: 50%; color: white; font-weight: bold; width: 30px; height: 30px; cursor: pointer; }
     .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; }
     .popup { background:white; padding:20px; border-radius:10px; max-width:300px; text-align:center; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -45,31 +33,26 @@
 <body>
   <h1>Locali Firenze 2.0</h1>
 
-  <!-- FILTRI -->
-  <div class="filters">
-    <div class="dropdown" id="zonaFilter"></div>
-    <div class="dropdown" id="tipoFilter"></div>
-    <div class="dropdown" id="consigliatoFilter"></div>
-    <div class="dropdown" id="glutenFilter"></div>
-  </div>
-  <div class="filter-buttons">
+  <div id="filtri" style="margin-top:20px; text-align:center;">
     <button onclick="filtra()">Filtra</button>
     <button onclick="randomLocale()">Casuale 🎲</button>
-    <button onclick="vaiAlModulo()">Aggiungi ➕</button>
-  </div>
-  <div class="filters">
-    <input type="text" id="searchInput" placeholder="Cerca locale..." oninput="filtra()" />
+    <button onclick="vaiAlModulo()">Aggiungi ➕</button><br><br>
+    <input id="searchInput" type="text" placeholder="Cerca locale..." style="padding:8px; width:250px;">
   </div>
 
-  <!-- LOADER -->
+  <div class="filters">
+    <div id="zonaFilter"></div>
+    <div id="tipoFilter"></div>
+    <div id="consigliatoFilter"></div>
+    <div id="glutenFilter"></div>
+  </div>
+
   <div id="loader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); align-items:center; justify-content:center; z-index:9999;">
     <div class="spinner" style="border: 6px solid #f3f3f3; border-top: 6px solid #ff7e5f; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;"></div>
   </div>
 
-  <!-- LISTA -->
   <div class="list" id="lista"></div>
 
-  <!-- FORM AGGIUNTA -->
   <h2 id="formAggiungi">Aggiungi Locale</h2>
   <div class="filters">
     <input type="text" id="nome" placeholder="Nome locale">
@@ -85,7 +68,6 @@
     <button onclick="aggiungi()">Aggiungi</button>
   </div>
 
-  <!-- POPUP GENERICO -->
   <div class="overlay" id="popupGenerico">
     <div class="popup">
       <h3 id="popupTitolo"></h3>
@@ -97,19 +79,14 @@
   <script>
   const SCRIPT_URL_LOCALI = "https://script.google.com/macros/s/AKfycbwt6REPdUGMk02NE-VBxu8vcauaAngZ8AzexZcq1XQFmeBKaroRxOM57jKK-Of-_lcC/exec";
 
-  let myName = localStorage.getItem("myName");
-  if (!myName) {
-    myName = prompt("Inserisci nome e cognome:") || "Anonimo";
-    localStorage.setItem("myName", myName.trim());
-  } else {
-    myName = myName.trim();
-  }
+  let myName = localStorage.getItem("myName") || prompt("Inserisci nome e cognome:") || "Anonimo";
+  localStorage.setItem("myName", myName.trim());
 
   let locali = [];
-  let zone = []; // [{zona,lat,lon}]
+  let commenti = [];
+  let zone = [];
   let userPosition = null;
 
-  // util
   function mostraPopup(t, m) {
     document.getElementById("popupTitolo").textContent = t;
     document.getElementById("popupMessaggio").textContent = m;
@@ -119,64 +96,125 @@
   function mostraLoader() { document.getElementById("loader").style.display = "flex"; }
   function nascondiLoader() { document.getElementById("loader").style.display = "none"; }
 
-  // chiudi dropdown clic fuori
-  document.addEventListener("click", e => {
-    if (!e.target.closest(".dropdown")) {
-      document.querySelectorAll(".dropdown").forEach(d => d.classList.remove("show"));
-    }
-  });
-
-  // carica dati
   async function carica() {
     try {
       mostraLoader();
       const res = await fetch(SCRIPT_URL_LOCALI);
       const data = await res.json();
-
-      // normalizza proprietà (gestisce sia {locali:[...]} sia array diretto e maiuscole)
-      let arr = Array.isArray(data) ? data : (data.locali || []);
-      locali = arr.map(o => ({
-        id: o.id || o.ID,
-        nome: o.nome || o.Nome || "",
-        zona: o.zona || o.Zona || "",
-        tipo: o.tipo || o.Tipo || "",
-        link: o.link || o.Link || "",
-        voto: (o.voto ?? o.Voto ?? "").toString(),
-        consigliatoDa: o.consigliatoDa || o.ConsigliatoDa || "—",
-        glutenFree: o.glutenFree || o.GlutenFree || "",
-        commento: o.commento || o.Commento || "",
-        lat: parseFloat(o.lat ?? o.Lat ?? o.latitudine ?? o.Latitudine ?? NaN),
-        lon: parseFloat(o.lon ?? o.Lon ?? o.longitudine ?? o.Longitudine ?? NaN)
-      }));
-
-      // mappa zone con coordinate se disponibili
-      const mapZone = {};
-      locali.forEach(l => {
-        if (l.zona && !Number.isNaN(l.lat) && !Number.isNaN(l.lon)) {
-          mapZone[l.zona] = { lat: l.lat, lon: l.lon };
-        }
-      });
-      zone = Object.entries(mapZone).map(([zona, coords]) => ({ zona, lat: coords.lat, lon: coords.lon }));
-
-      mostra(locali);
+      locali = data.locali || [];
+      commenti = data.commenti || [];
+      zone = data.zone || [];
+      mostra();
       aggiornaFiltri();
     } catch (err) {
       console.error("Errore caricamento dati:", err);
-      mostraPopup("Errore", "Impossibile caricare i dati");
     } finally {
       nascondiLoader();
     }
   }
 
-  // render lista
-  function mostra(lista) {
+  function creaDropdown(id, placeholder, options) {
+    const container = document.getElementById("filtri");
+    let select = document.getElementById(id);
+    if (select) select.remove();
+
+    select = document.createElement("select");
+    select.id = id;
+    select.innerHTML = `<option value="">${placeholder}</option><option value="Tutti">Tutti</option>` +
+      options.map(o => `<option value="${o}">${o}</option>`).join("");
+    select.style.margin = "5px";
+    container.appendChild(select);
+  }
+
+  function getSelezionato(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : "";
+  }
+
+  function aggiornaFiltri() {
+    const zoneUnique = [...new Set(locali.map(l => l.zona).filter(Boolean))];
+    creaDropdown("zonaFilter", "Zona", ["Più vicino a me", ...zoneUnique]);
+
+    const tipiUnique = [...new Set(locali.flatMap(l => l.tipo ? l.tipo.split("+") : []))];
+    creaDropdown("tipoFilter", "Tipo", tipiUnique);
+
+    const consUnique = [...new Set(locali.map(l => l.consigliatoDa || "—"))];
+    creaDropdown("consigliatoFilter", "Consigliato da", consUnique);
+
+    const gfUnique = [...new Set(locali.map(l => l.glutenFree || "—"))];
+    creaDropdown("glutenFilter", "Gluten free", gfUnique);
+  }
+
+  async function filtra() {
+    let zonaSel = getSelezionato("zonaFilter");
+    const tipoSel = getSelezionato("tipoFilter");
+    const consSel = getSelezionato("consigliatoFilter");
+    const gfSel = getSelezionato("glutenFilter");
+    const query = document.getElementById("searchInput").value.toLowerCase();
+
+    if (zonaSel === "Più vicino a me") {
+      try {
+        zonaSel = await trovaZonaPiuVicino();
+        if (zonaSel) mostraPopup("Zona più vicina", `Ti trovi vicino a: ${zonaSel}`);
+      } catch {
+        zonaSel = "";
+      }
+    }
+
+    const f = locali.filter(l => {
+      const matchZona = !zonaSel || zonaSel === "Tutti" || l.zona === zonaSel;
+      const matchTipo = !tipoSel || tipoSel === "Tutti" || (l.tipo && l.tipo.includes(tipoSel));
+      const matchCons = !consSel || consSel === "Tutti" || l.consigliatoDa === consSel;
+      const matchGF = !gfSel || gfSel === "Tutti" || l.glutenFree === gfSel;
+      const matchQuery = !query || l.nome.toLowerCase().includes(query);
+      return matchZona && matchTipo && matchCons && matchGF && matchQuery;
+    });
+    mostra(f);
+  }
+
+  function getCommentiPerLocale(id_locale) {
+    return commenti.filter(c => c.ID_locale === id_locale);
+  }
+
+  async function aggiungiCommento(id_locale) {
+    const testo = prompt("Scrivi il tuo commento:");
+    if (!testo) return;
+    const nuovo = { action: "addComment", id_locale, autore: myName, testo };
+    try {
+      mostraLoader();
+      await fetch(SCRIPT_URL_LOCALI, { method: "POST", body: JSON.stringify(nuovo) });
+      await carica();
+    } catch (e) { console.error(e); } finally { nascondiLoader(); }
+  }
+
+  async function eliminaCommento(id_commento) {
+    if (!confirm("Vuoi eliminare questo commento?")) return;
+    try {
+      mostraLoader();
+      await fetch(SCRIPT_URL_LOCALI, { method: "POST", body: JSON.stringify({ action: "deleteComment", id_commento }) });
+      await carica();
+    } catch (e) { console.error(e); } finally { nascondiLoader(); }
+  }
+
+  function mostra(lista = locali) {
     const c = document.getElementById("lista");
     c.innerHTML = "";
-    lista.forEach(l => {
-      const isOwner = (l.consigliatoDa || "").trim().toLowerCase() === myName.toLowerCase();
-      const isAdmin = myName.toLowerCase() === "mauro di girolamo";
+    lista.forEach((l, i) => {
+      const isOwner = l.consigliatoDa && l.consigliatoDa.trim().toLowerCase() === myName.trim().toLowerCase();
+      const isAdmin = myName.trim().toLowerCase() === "mauro di girolamo";
+      const comms = getCommentiPerLocale(l.ID);
+
+      let commentSection = "";
+      if (comms.length > 0) {
+        commentSection = `<div style="margin-top:10px;">${comms.map(c => `
+          <div style="border-top:1px solid #eee; padding:5px;">
+            <strong>${c.autore}</strong>: ${c.testo}
+            ${(isAdmin || c.autore === myName) ? `<button onclick="eliminaCommento('${c.ID_commento}')" style="float:right;color:red;">x</button>` : ""}
+          </div>`).join("")}</div>`;
+      }
+
       c.innerHTML += `
-        <div class="card" data-id="${l.id}">
+        <div class="card" data-idx="${i}">
           <div>
             <strong>${l.nome}</strong> ${l.glutenFree==="si" ? "🌾🚫" : ""}<br>
             Zona: ${l.zona}<br>
@@ -184,69 +222,87 @@
             Voto: ${l.voto || "—"}<br>
             Consigliato da: ${l.consigliatoDa || "—"}<br>
             <a href="${l.link}" target="_blank">Link</a>
+            ${commentSection}
           </div>
           <div class="actions">
+            <button class="comment" onclick="aggiungiCommento('${l.ID}')">💬</button>
             ${(isOwner || isAdmin) ? `
-              <button class="edit" onclick="modifica('${l.id}')">✎</button>
-              <button class="remove" onclick="rimuovi('${l.id}')">×</button>
-            ` : ``}
+              <button class="edit" onclick="modifica(${i})">✎</button>
+              <button class="remove" onclick="rimuovi(${i})">×</button>` : ""}
           </div>
         </div>`;
     });
   }
 
-  // dropdown multi-select con checkbox e "Tutti"
-  function creaDropdown(id, titolo, valori) {
-    const unici = [...new Set(valori)].filter(v => v);
-    const div = document.getElementById(id);
-    div.innerHTML = `
-      <div class="dropdown-btn" data-titolo="${titolo}" onclick="toggleDropdown('${id}', event)">${titolo}</div>
-      <div class="dropdown-content">
-        <label><input type="checkbox" value="__ALL__" checked onchange="selezionaTutti('${id}', this)"> Tutti</label>
-        ${unici.map(v => `<label><input type="checkbox" value="${v}" onchange="aggiornaTesto('${id}')"> ${v}</label>`).join("")}
+  function vaiAlModulo() { document.getElementById("formAggiungi").scrollIntoView({ behavior: "smooth" }); }
+
+  async function aggiungi() {
+    const nome = document.getElementById("nome").value.trim();
+    const zona = document.getElementById("zona").value.trim();
+    const tipo = document.getElementById("tipo").value.trim();
+    const link = document.getElementById("link").value.trim();
+    const voto = document.getElementById("voto").value;
+    const glutenFree = document.getElementById("glutenFree").value;
+    const commento = document.getElementById("commento").value.trim();
+    if (!nome || !zona || !tipo) { mostraPopup("Attenzione ⚠️", "Inserisci Nome, Zona e Tipo!"); return; }
+
+    const nuovo = { action: "add", nome, zona, tipo, link, voto, consigliatoDa: myName, glutenFree, commento };
+    try {
+      mostraLoader();
+      await fetch(SCRIPT_URL_LOCALI, { method: "POST", body: JSON.stringify(nuovo) });
+      await carica();
+      mostraPopup("Fatto!", "Locale aggiunto con successo");
+    } catch (e) { console.error(e); } finally { nascondiLoader(); }
+  }
+
+  async function rimuovi(i) {
+    if (!confirm("Vuoi eliminare questo locale?")) return;
+    try {
+      mostraLoader();
+      await fetch(SCRIPT_URL_LOCALI, { method: "POST", body: JSON.stringify({ action: "delete", id: locali[i].ID }) });
+      await carica();
+      mostraPopup("Eliminato", "Locale cancellato");
+    } catch (e) { console.error(e); } finally { nascondiLoader(); }
+  }
+
+  async function modifica(i) {
+    const l = locali[i];
+    const card = document.querySelector(`.card[data-idx="${i}"]`);
+    card.innerHTML = `
+      <div>
+        <label>Nome:<br><input type="text" id="edit-nome-${i}" value="${l.nome}"></label><br>
+        <label>Zona:<br><input type="text" id="edit-zona-${i}" value="${l.zona}"></label><br>
+        <label>Tipo:<br><input type="text" id="edit-tipo-${i}" value="${l.tipo}"></label><br>
+        <label>Link:<br><input type="text" id="edit-link-${i}" value="${l.link}"></label><br>
+        <label>Voto:<br><input type="text" id="edit-voto-${i}" value="${l.voto || ""}"></label><br>
+        <label>Gluten free:<br><input type="text" id="edit-gf-${i}" value="${l.glutenFree || ""}"></label><br>
+        <label>Commento:<br><textarea id="edit-commento-${i}" rows="2">${l.commento || ""}</textarea></label>
       </div>
-    `;
-  }
-  function toggleDropdown(id, event) {
-    event.stopPropagation();
-    document.querySelectorAll(".dropdown").forEach(d => { if (d.id !== id) d.classList.remove("show"); });
-    document.getElementById(id).classList.toggle("show");
-  }
-  function getSelezionati(id) {
-    return [...document.querySelectorAll(`#${id} .dropdown-content input:checked`)]
-      .map(cb => cb.value).filter(v => v !== "__ALL__");
-  }
-  function selezionaTutti(id, allCb) {
-    const checks = document.querySelectorAll(`#${id} .dropdown-content input[type="checkbox"]`);
-    checks.forEach(cb => { if (cb !== allCb) cb.checked = false; });
-    aggiornaTesto(id);
-  }
-  function aggiornaTesto(id) {
-    const btn = document.querySelector(`#${id} .dropdown-btn`);
-    const selezionati = getSelezionati(id);
-    if (selezionati.length === 0) btn.textContent = btn.dataset.titolo;
-    else if (selezionati.length === 1) btn.textContent = selezionati[0];
-    else btn.textContent = `${selezionati.length} selezionati`;
-    // deseleziona "Tutti" se selezioni altro
-    const all = document.querySelector(`#${id} input[value="__ALL__"]`);
-    if (all) all.checked = selezionati.length === 0;
+      <div class="actions"><button class="edit" onclick="salvaModifica(${i})">💾</button></div>`;
   }
 
-  function aggiornaFiltri() {
-    const zoneValues = ["Più vicino a me", ...new Set(locali.map(l => l.zona).filter(Boolean))];
-    creaDropdown("zonaFilter", "Tutte le zone", zoneValues);
-
-    const tipoValues = [...new Set(locali.flatMap(l => (l.tipo || "").split("+").map(s => s.trim()).filter(Boolean)))];
-    creaDropdown("tipoFilter", "Tutti i tipi", tipoValues);
-
-    const consValues = [...new Set(locali.map(l => l.consigliatoDa || "—"))];
-    creaDropdown("consigliatoFilter", "Tutti i consiglieri", consValues);
-
-    const gfValues = ["si", "no"];
-    creaDropdown("glutenFilter", "Gluten free", gfValues);
+  async function salvaModifica(i) {
+    const loc = locali[i];
+    const upd = {
+      action: "update",
+      id: loc.ID,
+      nome: document.getElementById(`edit-nome-${i}`).value,
+      zona: document.getElementById(`edit-zona-${i}`).value,
+      tipo: document.getElementById(`edit-tipo-${i}`).value,
+      link: document.getElementById(`edit-link-${i}`).value,
+      voto: document.getElementById(`edit-voto-${i}`).value,
+      glutenFree: document.getElementById(`edit-gf-${i}`).value,
+      consigliatoDa: loc.consigliatoDa,
+      commento: document.getElementById(`edit-commento-${i}`).value
+    };
+    try {
+      mostraLoader();
+      await fetch(SCRIPT_URL_LOCALI, { method: "POST", body: JSON.stringify(upd) });
+      await carica();
+      mostraPopup("Aggiornato", "Locale modificato");
+    } catch (e) { console.error(e); } finally { nascondiLoader(); }
   }
 
-  // distanza
   function distanza(lat1, lon1, lat2, lon2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -254,16 +310,17 @@
     const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
+
   async function trovaZonaPiuVicino() {
     return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) { mostraPopup("Errore", "Geolocalizzazione non supportata"); return reject(); }
+      if (!navigator.geolocation) { mostraPopup("Errore", "Geolocalizzazione non supportata"); reject(); return; }
       navigator.geolocation.getCurrentPosition(
         pos => {
           userPosition = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-          if (zone.length === 0) { mostraPopup("Attenzione", "Nessuna zona con coordinate disponibile"); return reject(); }
+          if (zone.length === 0) { mostraPopup("Errore", "Nessuna zona disponibile"); reject(); return; }
           let best = null, min = Infinity;
           zone.forEach(z => {
-            const d = distanza(userPosition.lat, userPosition.lon, z.lat, z.lon);
+            const d = distanza(userPosition.lat, userPosition.lon, z.latitudine, z.longitudine);
             if (d < min) { min = d; best = z.zona; }
           });
           resolve(best);
@@ -273,161 +330,8 @@
     });
   }
 
-  // filtro
-  async function filtra() {
-    let zoneSel = getSelezionati("zonaFilter");
-    const tipoSel = getSelezionati("tipoFilter");
-    const consSel = getSelezionati("consigliatoFilter");
-    const gfSel = getSelezionati("glutenFilter");
-    const query = document.getElementById("searchInput").value.toLowerCase().trim();
-
-    // gestione "Più vicino a me"
-    if (zoneSel.includes("Più vicino a me")) {
-      try {
-        const vicina = await trovaZonaPiuVicino();
-        if (vicina) {
-          mostraPopup("Zona più vicina", `Ti trovi vicino a: ${vicina}`);
-          zoneSel = [vicina];
-        } else {
-          zoneSel = [];
-        }
-      } catch {
-        zoneSel = [];
-      }
-    }
-
-    const f = locali.filter(l => {
-      const matchZona = zoneSel.length === 0 || zoneSel.includes(l.zona);
-      const tipiLoc = (l.tipo || "").split("+").map(s => s.trim()).filter(Boolean);
-      const matchTipo = tipoSel.length === 0 || tipoSel.some(t => tipiLoc.includes(t));
-      const matchCons = consSel.length === 0 || consSel.includes(l.consigliatoDa || "—");
-      const matchGF = gfSel.length === 0 || gfSel.includes(l.glutenFree || "");
-      const matchQuery = !query || (l.nome || "").toLowerCase().includes(query);
-      return matchZona && matchTipo && matchCons && matchGF && matchQuery;
-    });
-
-    mostra(f);
-  }
-
-  // azioni
-  function vaiAlModulo() { document.getElementById("formAggiungi").scrollIntoView({ behavior: "smooth" }); }
-
-  async function aggiungi() {
-    const vNome = document.getElementById("nome").value.trim();
-    const vZona = document.getElementById("zona").value.trim();
-    const vTipo = document.getElementById("tipo").value.trim();
-    const vLink = document.getElementById("link").value.trim();
-    const vVoto = document.getElementById("voto").value;
-    const vGF = document.getElementById("glutenFree").value;
-    const vComm = document.getElementById("commento").value.trim();
-
-    if (!vNome || !vZona || !vTipo) {
-      mostraPopup("Attenzione", "Inserisci Nome, Zona e Tipo");
-      return;
-    }
-
-    const payload = {
-      action: "add",
-      nome: vNome, zona: vZona, tipo: vTipo, link: vLink,
-      voto: vVoto, consigliatoDa: myName, glutenFree: vGF, commento: vComm
-    };
-
-    try {
-      mostraLoader();
-      await fetch(SCRIPT_URL_LOCALI, { method: "POST", body: JSON.stringify(payload) });
-      await carica();
-      mostraPopup("Fatto!", "Locale aggiunto");
-      // pulizia campi
-      document.getElementById("nome").value = "";
-      document.getElementById("zona").value = "";
-      document.getElementById("tipo").value = "";
-      document.getElementById("link").value = "";
-      document.getElementById("voto").value = "";
-      document.getElementById("glutenFree").value = "";
-      document.getElementById("commento").value = "";
-    } catch (e) {
-      console.error(e);
-      mostraPopup("Errore", "Impossibile aggiungere il locale");
-    } finally {
-      nascondiLoader();
-    }
-  }
-
-  async function rimuovi(id) {
-    if (!confirm("Vuoi eliminare questo locale?")) return;
-    try {
-      mostraLoader();
-      await fetch(SCRIPT_URL_LOCALI, { method: "POST", body: JSON.stringify({ action: "delete", id }) });
-      await carica();
-      mostraPopup("Eliminato", "Locale cancellato");
-    } catch (e) {
-      console.error(e);
-      mostraPopup("Errore", "Impossibile cancellare il locale");
-    } finally {
-      nascondiLoader();
-    }
-  }
-
-  function modifica(id) {
-    const l = locali.find(x => x.id === id);
-    if (!l) return;
-
-    const card = document.querySelector(`.card[data-id="${id}"]`);
-    card.innerHTML = `
-      <div>
-        <label>Nome:<br><input type="text" id="edit-nome-${id}" value="${l.nome}"></label><br>
-        <label>Zona:<br><input type="text" id="edit-zona-${id}" value="${l.zona}"></label><br>
-        <label>Tipo:<br><input type="text" id="edit-tipo-${id}" value="${l.tipo}"></label><br>
-        <label>Link:<br><input type="text" id="edit-link-${id}" value="${l.link}"></label><br>
-        <label>Voto:<br>
-          <select id="edit-voto-${id}">
-            <option value="" ${!l.voto?"selected":""}></option>
-            ${[1,2,3,4,5].map(v => `<option value="${v}" ${String(l.voto)===String(v)?"selected":""}>${v}</option>`).join("")}
-          </select>
-        </label><br>
-        <label>Gluten free:<br>
-          <select id="edit-gf-${id}">
-            <option value="" ${!l.glutenFree?"selected":""}></option>
-            <option value="si" ${l.glutenFree==="si"?"selected":""}>Sì</option>
-            <option value="no" ${l.glutenFree==="no"?"selected":""}>No</option>
-          </select>
-        </label><br>
-        <label>Commento:<br><textarea id="edit-commento-${id}" rows="2" style="width:100%">${l.commento || ""}</textarea></label>
-      </div>
-      <div class="actions">
-        <button class="edit" onclick="salvaModifica('${id}')">💾</button>
-      </div>`;
-  }
-
-  async function salvaModifica(id) {
-    const upd = {
-      action: "update",
-      id,
-      nome: document.getElementById(`edit-nome-${id}`).value,
-      zona: document.getElementById(`edit-zona-${id}`).value,
-      tipo: document.getElementById(`edit-tipo-${id}`).value,
-      link: document.getElementById(`edit-link-${id}`).value,
-      voto: document.getElementById(`edit-voto-${id}`).value,
-      glutenFree: document.getElementById(`edit-gf-${id}`).value,
-      commento: document.getElementById(`edit-commento-${id}`).value,
-      // manteniamo consigliatoDa originale lato server se serve
-    };
-    try {
-      mostraLoader();
-      await fetch(SCRIPT_URL_LOCALI, { method: "POST", body: JSON.stringify(upd) });
-      await carica();
-      mostraPopup("Aggiornato", "Locale modificato");
-    } catch (e) {
-      console.error(e);
-      mostraPopup("Errore", "Impossibile modificare il locale");
-    } finally {
-      nascondiLoader();
-    }
-  }
-
-  // random
   function randomLocale() {
-    if (!locali.length) return mostraPopup("Vuoto", "Nessun locale disponibile");
+    if (locali.length === 0) { mostraPopup("Vuoto", "Nessun locale disponibile"); return; }
     const r = locali[Math.floor(Math.random() * locali.length)];
     mostraPopup("Locale casuale 🎲", `${r.nome} (${r.tipo}, zona ${r.zona})`);
   }
