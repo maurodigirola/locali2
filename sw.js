@@ -1,22 +1,25 @@
-const CACHE_NAME = "locali-firenze-v1";
+const CACHE_NAME = "locali-firenze-v3";   // nuovo nome cache
 const ASSETS = [
   "./",
-  "./index.html",
-  "./manifest.json",
+  "./Locali_Firenze_05.html",
   "./icon-192.png",
   "./icon-512.png"
 ];
 
-// installa e salva in cache
 self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
 });
 
-// serve file dalla cache o li scarica
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    )
   );
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", event => {
+  event.respondWith(caches.match(event.request).then(r => r || fetch(event.request)));
 });
