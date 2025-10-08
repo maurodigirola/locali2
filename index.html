@@ -1,69 +1,111 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Locali Firenze</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { text-align: center; margin-bottom: 20px; }
+    .list { display: grid; gap: 10px; }
+    .card {
+      background: white; padding: 15px; border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .card a { color: #0077cc; text-decoration: none; }
+    .loader {
+      display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(255,255,255,0.8); justify-content:center; align-items:center; z-index: 1000;
+    }
+    .spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #ff7e5f;
+      border-radius: 50%;
+      width: 50px; height: 50px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
+  </style>
+</head>
+<body>
+  <h1>Locali Firenze</h1>
+
+  <div id="lista" class="list"></div>
+
+  <div id="loader" class="loader">
+    <div class="spinner"></div>
+  </div>
+
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwt6REPdUGMk02NE-VBxu8vcauaAngZ8AzexZcq1XQFmeBKaroRxOM57jKK-Of-_lcC/exec";
 
 let locali = [];
-let commenti = [];
-let zone = [];
 
-// Carica tutto dal backend
-async function caricaDati() {
+// mostra / nascondi loader
+function mostraLoader(show = true) {
+  document.getElementById("loader").style.display = show ? "flex" : "none";
+}
+
+// funzione principale di caricamento
+async function carica() {
+  mostraLoader(true);
+  const listaDiv = document.getElementById("lista");
+  listaDiv.innerHTML = "<p>Caricamento in corso...</p>";
+
   try {
-    const res = await fetch(SCRIPT_URL, { cache: "no-store" });
+    const res = await fetch(SCRIPT_URL + "?res=locali", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store"
+    });
+
+    if (!res.ok) throw new Error("Errore HTTP: " + res.status);
+
     const data = await res.json();
-    if (!data.locali || !Array.isArray(data.locali)) throw new Error("Errore nel formato dati");
-    locali = data.locali;
-    commenti = data.commenti || [];
-    zone = data.zone || [];
+    locali = data;
     mostra(locali);
+
   } catch (err) {
     console.error("Errore nel caricamento:", err);
-    alert("Errore nel caricamento dei dati. Riprova più tardi.");
+    listaDiv.innerHTML = `<p style="color:red;">Errore nel caricamento dati. Controlla che lo script Apps Script sia pubblico e attivo.</p>`;
+  } finally {
+    mostraLoader(false);
   }
 }
 
-function mostra(lista = locali) {
-  const container = document.getElementById("lista");
-  container.innerHTML = "";
-  lista.forEach((loc, index) => {
-    container.innerHTML += `
-      <div class="card" id="card-${index}">
-        <div>
-          <strong>${loc.nome}</strong><br>
-          Zona: ${loc.zona} | Tipo: ${loc.tipo} | Voto: ${loc.voto || "—"} <br>
-          ${loc.link ? `<a href="${loc.link}" target="_blank">Mappa</a>` : ""}
-        </div>
-        <div class="actions">
-          <button class="edit" onclick="modifica(${index})">✎</button>
-          <button class="remove" onclick="rimuovi(${index})">×</button>
-        </div>
-      </div>
+// mostra lista locali
+function mostra(lista) {
+  const div = document.getElementById("lista");
+  div.innerHTML = "";
+
+  if (!lista.length) {
+    div.innerHTML = "<p>Nessun locale trovato.</p>";
+    return;
+  }
+
+  lista.forEach(l => {
+    const c = document.createElement("div");
+    c.className = "card";
+    c.innerHTML = `
+      <strong>${l.nome}</strong><br>
+      Zona: ${l.zona}<br>
+      Tipo: ${l.tipo || "-"}<br>
+      Voto: ${l.voto || "-"}<br>
+      Consigliato da: ${l.consigliatoDa || "-"}<br>
+      Gluten free: ${l.glutenFree || "-"}<br>
+      ${l.link ? `<a href="${l.link}" target="_blank">Apri in Maps</a>` : ""}
+      <p>${l.commento || ""}</p>
     `;
+    div.appendChild(c);
   });
 }
 
-function filtra() {
-  const zona = document.getElementById("zonaFilter").value;
-  const tipo = document.getElementById("tipoFilter").value;
-  let filtrati = locali.filter(l =>
-    (zona === "" || l.zona === zona) &&
-    (tipo === "" || l.tipo === tipo)
-  );
-  mostra(filtrati);
-}
-
-function randomLocale() {
-  if (locali.length === 0) { alert("Nessun locale disponibile"); return; }
-  const r = locali[Math.floor(Math.random() * locali.length)];
-  alert(`Prova: ${r.nome} (${r.tipo} in zona ${r.zona})`);
-}
-
-// funzioni segnaposto (da completare in step successivi)
-function aggiungi() { alert("Funzione Aggiungi in aggiornamento..."); }
-function rimuovi() { alert("Funzione Rimuovi in aggiornamento..."); }
-function modifica() { alert("Funzione Modifica in aggiornamento..."); }
-
-// Avvio iniziale
-window.addEventListener("load", caricaDati);
+// avvio
+window.onload = carica;
 </script>
-
-
+</body>
+</html>
