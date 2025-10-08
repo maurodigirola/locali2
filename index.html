@@ -84,7 +84,8 @@
 
     async function carica() {
       try {
-        const resLocali = await fetch(SCRIPT_URL + "?type=locali");
+        const resLocali = await fetch(SCRIPT_URL);
+
         locali = await resLocali.json();
         if (!Array.isArray(locali)) locali = [];
 
@@ -137,7 +138,8 @@
       const glutenFree = document.getElementById("glutenFree").value;
       const commento = document.getElementById("commento").value;
 
-      const nuovo = { action: "addLocale", nome, zona, tipo, link, voto, consigliatoDa, glutenFree, commento };
+     const nuovo = { action: "add", nome, zona, tipo, link, voto, consigliatoDa, glutenFree, commento };
+
 
       await fetch(SCRIPT_URL, {
         method: "POST",
@@ -187,3 +189,4 @@
   </script>
 </body>
 </html>
+
