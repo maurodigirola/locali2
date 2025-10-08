@@ -235,25 +235,70 @@
   }
 
   function vaiAlModulo() { document.getElementById("formAggiungi").scrollIntoView({ behavior: "smooth" }); }
+async function geocodificaZonaClient(zona) {
+  if (!zona) return { latitudine: "", longitudine: "" };
+  try {
+    const query = `Firenze, ${zona}, Italia`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "LocaliFirenzeApp/1.0 (contact: maurodigirola@gmail.com)" }
+    });
+    const data = await res.json();
+    if (data.length > 0) {
+      return {
+        latitudine: parseFloat(data[0].lat),
+        longitudine: parseFloat(data[0].lon)
+      };
+    }
+    return { latitudine: "", longitudine: "" };
+  } catch (e) {
+    console.error("Errore geocodifica client:", e);
+    return { latitudine: "", longitudine: "" };
+  }
+}
 
   async function aggiungi() {
-    const nome = document.getElementById("nome").value.trim();
-    const zona = document.getElementById("zona").value.trim();
-    const tipo = document.getElementById("tipo").value.trim();
-    const link = document.getElementById("link").value.trim();
-    const voto = document.getElementById("voto").value;
-    const glutenFree = document.getElementById("glutenFree").value;
-    const commento = document.getElementById("commento").value.trim();
-    if (!nome || !zona || !tipo) { mostraPopup("Attenzione ⚠️", "Inserisci Nome, Zona e Tipo!"); return; }
+  const nome = document.getElementById("nome").value.trim();
+  const zona = document.getElementById("zona").value.trim();
+  const tipo = document.getElementById("tipo").value.trim();
+  const link = document.getElementById("link").value.trim();
+  const voto = document.getElementById("voto").value;
+  const glutenFree = document.getElementById("glutenFree").value;
+  const commento = document.getElementById("commento").value.trim();
 
-    const nuovo = { action: "add", nome, zona, tipo, link, voto, consigliatoDa: myName, glutenFree, commento };
-    try {
-      mostraLoader();
-      await fetch(SCRIPT_URL_LOCALI, { method: "POST", body: JSON.stringify(nuovo) });
-      await carica();
-      mostraPopup("Fatto!", "Locale aggiunto con successo");
-    } catch (e) { console.error(e); } finally { nascondiLoader(); }
+  if (!nome || !zona || !tipo) {
+    mostraPopup("Attenzione ⚠️", "Inserisci Nome, Zona e Tipo!");
+    return;
   }
+
+  mostraLoader();
+
+  // 🔹 Calcola lat/lon prima di inviare i dati al server
+  const location = await geocodificaZonaClient(zona);
+
+  const nuovo = {
+    action: "add",
+    nome, zona, tipo, link, voto,
+    consigliatoDa: myName,
+    glutenFree, commento,
+    latitudine: location.latitudine,
+    longitudine: location.longitudine
+  };
+
+  try {
+    await fetch(SCRIPT_URL_LOCALI, {
+      method: "POST",
+      body: JSON.stringify(nuovo)
+    });
+    await carica();
+    mostraPopup("Fatto!", "Locale aggiunto con successo");
+  } catch (e) {
+    console.error(e);
+  } finally {
+    nascondiLoader();
+  }
+}
+
 
   async function rimuovi(i) {
     if (!confirm("Vuoi eliminare questo locale?")) return;
@@ -340,3 +385,4 @@
   </script>
 </body>
 </html>
+
