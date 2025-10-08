@@ -105,10 +105,10 @@ async function carica() {
     const res = await fetch(SCRIPT_URL_LOCALI);
     const data = await res.json();
 
-    // Gestione compatibile con due formati di risposta: [ ... ] oppure { locali: [ ... ] }
+    // Supporta sia { locali: [...] } che [ ... ]
     locali = Array.isArray(data) ? data : (data.locali || []);
 
-    // Estraggo le zone con coordinate
+    // Costruisce la mappa delle zone con coordinate
     const mapZone = {};
     locali.forEach(l => {
       if (l.zona && l.lat && l.lon) {
@@ -120,13 +120,14 @@ async function carica() {
       zona, lat: coords.lat, lon: coords.lon
     }));
 
-    mostra(); // aggiorna la visualizzazione
+    mostra();
   } catch (err) {
     console.error("Errore caricamento dati:", err);
   } finally {
     nascondiLoader();
   }
 }
+
 
 
   function mostra(lista = locali) {
@@ -272,6 +273,7 @@ async function carica() {
   </script>
 </body>
 </html>
+
 
 
 
