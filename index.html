@@ -1,392 +1,68 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Locali Firenze</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#ff7e5f" />
-
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; justify-content: center; }
-    .filter-buttons { text-align: center; margin: 10px 0; }
-    input, button, select, textarea { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1em; }
-    button { background: #ff7e5f; color: white; cursor: pointer; border: none; transition: 0.3s; }
-    button:hover { background: #eb5757; }
-    .list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 10px;
-      max-height: 70vh;
-      overflow-y: auto;
-      padding-right: 5px;
-    }
-    .card {
-      background: white; padding: 15px; border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .card div { max-width: 220px; word-wrap: break-word; white-space: normal; }
-    .card a { color: #0077cc; text-decoration: none; }
-    .actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-    .remove, .edit, .comment {
-      background: #ff4d4d; border: none; border-radius: 50%; color: white; font-weight: bold;
-      width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center;
-      justify-content: center; font-size: 16px; line-height: 1; padding: 0;
-    }
-    .edit { background: #ffa500; }
-    .comment { background: #ff9966; }
-    .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6);
-      display:none; justify-content:center; align-items:center; z-index:1000; }
-    .popup { background:white; padding:20px; border-radius:10px; max-width:350px; text-align:center; }
-    .menu { position: relative; display: inline-block; }
-    .menu-content { display: none; position: absolute; right:0; background: white;
-      border: 1px solid #ccc; border-radius: 8px; padding: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 100; }
-    .menu-content button { display: block; width: 100%; margin: 5px 0; background: #ff7e5f; color: white; }
-    .menu.show .menu-content { display: block; }
-    .comment-container { display: flex; align-items: center; justify-content: center; }
-    .comment-count { margin-left: 6px; font-weight: bold; color: #ff7e5f; font-size: 14px; }
-
-    @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
-  </style>
-</head>
-
-<body>
-  <h1>Locali Firenze</h1>
-
-  <div class="filter-buttons">
-    <button onclick="randomLocale()">Casuale 🎲</button>
-    <button onclick="filtraPiuVicino()">Più vicino a me 📍</button>
-    <button onclick="vaiAlModulo()">Aggiungi ➕</button>
-    <div class="menu">
-      <button onclick="toggleMenu(event)">⋮ Altro</button>
-      <div id="extraMenu" class="menu-content">
-        <button onclick="condividiWhatsapp();chiudiMenu()">Condividi con un amico 📲</button>
-        <button style="background:#4CAF50;" onclick="window.location.href='https://maurodigirola.github.io/sondaggio/'; chiudiMenu()">Crea sondaggio 📝</button>
-        <button id="installButton" style="display:none; background:#ff7e5f;" onclick="installApp()">Installa app 📲</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="loader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-       background:rgba(255,255,255,0.7); align-items:center; justify-content:center; z-index:9999;">
-    <div class="spinner" style="border: 6px solid #f3f3f3; border-top: 6px solid #ff7e5f;
-         border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;"></div>
-  </div>
-
-  <div class="list" id="lista"></div>
-
-  <!-- POPUP COMMENTI -->
-  <div class="overlay" id="popupCommenti">
-    <div class="popup" style="max-width:400px; text-align:left;">
-      <h3>Commenti</h3>
-      <div id="listaCommenti" style="max-height:200px; overflow-y:auto; margin-bottom:10px;"></div>
-      <textarea id="nuovoCommento" placeholder="Scrivi un commento..." rows="3" style="width:100%;"></textarea>
-      <button onclick="aggiungiCommento()">Aggiungi commento</button>
-      <button onclick="chiudiCommenti()">Chiudi</button>
-    </div>
-  </div>
-
-  <!-- POPUP GENERICO -->
-  <div class="overlay" id="popupGenerico">
-    <div class="popup">
-      <h3 id="popupTitolo"></h3>
-      <p id="popupMessaggio"></p>
-      <button onclick="chiudiPopupGenerico()">OK</button>
-    </div>
-  </div>
-
-  <!-- FORM AGGIUNTA -->
-  <div class="overlay" id="formOverlay">
-    <div class="popup">
-      <h3 id="formTitle">Aggiungi locale</h3>
-      <input id="nome" placeholder="Nome locale"><br><br>
-      <input id="zona" placeholder="Zona"><br><br>
-      <input id="tipo" placeholder="Tipo (es. Trattoria, Bar...)"><br><br>
-      <input id="link" placeholder="Link Google Maps"><br><br>
-      <input id="voto" placeholder="Voto (1-10)" type="number" min="1" max="10"><br><br>
-      <input id="consigliatoDa" placeholder="Consigliato da"><br><br>
-      <select id="glutenFree">
-        <option value="">Gluten free?</option>
-        <option value="Si">Sì</option>
-        <option value="No">No</option>
-      </select><br><br>
-      <textarea id="commento" placeholder="Commento (facoltativo)"></textarea><br><br>
-      <button onclick="salvaLocale()">Salva ✅</button>
-      <button onclick="chiudiForm()">Annulla ❌</button>
-    </div>
-  </div>
-
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwt6REPdUGMk02NE-VBxu8vcauaAngZ8AzexZcq1XQFmeBKaroRxOM57jKK-Of-_lcC/exec";
 
 let locali = [];
 let commenti = [];
 let zone = [];
-let deferredPrompt = null;
-let currentLocaleId = null;
 
-// Nome utente locale
-let myName = localStorage.getItem("myName") || "";
-if (!myName) {
-  myName = prompt("Inserisci il tuo nome:") || "Anonimo";
-  localStorage.setItem("myName", myName);
-}
-
-// ================= POPUP =================
-function mostraPopup(titolo, messaggio) {
-  document.getElementById("popupTitolo").innerText = titolo;
-  document.getElementById("popupMessaggio").innerText = messaggio;
-  document.getElementById("popupGenerico").style.display = "flex";
-}
-function chiudiPopupGenerico() {
-  document.getElementById("popupGenerico").style.display = "none";
-}
-
-// ================= LOADER =================
-function mostraLoader() {
-  document.getElementById("loader").style.display = "flex";
-}
-function nascondiLoader() {
-  document.getElementById("loader").style.display = "none";
-}
-
-// ================= MENU =================
-function toggleMenu(e) {
-  e.stopPropagation();
-  document.querySelector(".menu").classList.toggle("show");
-}
-function chiudiMenu() {
-  document.querySelector(".menu").classList.remove("show");
-}
-document.addEventListener("click", e => {
-  if (!e.target.closest(".menu")) chiudiMenu();
-});
-
-function condividiWhatsapp() {
-  const text = encodeURIComponent("Scopri Locali Firenze 🍷 https://maurodigirola.github.io/locali/");
-  window.open("https://wa.me/?text=" + text, "_blank");
-}
-
-// ================= FORM =================
-function vaiAlModulo() {
-  document.getElementById("formOverlay").style.display = "flex";
-}
-function chiudiForm() {
-  document.getElementById("formOverlay").style.display = "none";
-}
-
-// ================= SALVATAGGIO =================
-async function salvaLocale() {
-  const nome = document.getElementById("nome").value.trim();
-  const zona = document.getElementById("zona").value.trim();
-  const tipo = document.getElementById("tipo").value.trim();
-  const link = document.getElementById("link").value.trim();
-  const voto = document.getElementById("voto").value.trim();
-  const consigliatoDa = document.getElementById("consigliatoDa").value.trim();
-  const glutenFree = document.getElementById("glutenFree").value.trim();
-  const commento = document.getElementById("commento").value.trim();
-
-  if (!nome || !zona) {
-    mostraPopup("Errore", "Nome e zona sono obbligatori");
-    return;
-  }
-
-  mostraLoader();
-  await aggiungiZonaSeManca(zona);
-
-  const nuovo = {
-    resource: "locali",
-    action: "add",
-    nome, zona, tipo, link, voto, consigliatoDa, glutenFree, commento
-  };
-
-  await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(nuovo) });
-  mostraPopup("Locale aggiunto", `${nome} è stato aggiunto con successo 🍷`);
-  chiudiForm();
-  await carica();
-}
-
-// ================= CARICAMENTO =================
-async function carica() {
+// Carica tutto dal backend
+async function caricaDati() {
   try {
-    mostraLoader();
-    const [resLocali, resCommenti, resZone] = await Promise.all([
-      fetch(SCRIPT_URL + "?res=locali", { cache: "no-store" }),
-      fetch(SCRIPT_URL + "?res=commenti", { cache: "no-store" }),
-      fetch(SCRIPT_URL + "?res=zone", { cache: "no-store" })
-    ]);
-
-    locali = await resLocali.json();
-    commenti = await resCommenti.json();
-    zone = await resZone.json();
-
-    if (!Array.isArray(locali)) locali = [];
-    if (!Array.isArray(commenti)) commenti = [];
-    if (!Array.isArray(zone)) zone = [];
-
-    locali.forEach(l => {
-      l.commenti = commenti.filter(c => c.Locale === l.nome && c.Zona === l.zona);
-    });
-
+    const res = await fetch(SCRIPT_URL, { cache: "no-store" });
+    const data = await res.json();
+    if (!data.locali || !Array.isArray(data.locali)) throw new Error("Errore nel formato dati");
+    locali = data.locali;
+    commenti = data.commenti || [];
+    zone = data.zone || [];
     mostra(locali);
   } catch (err) {
-    console.error("Errore caricamento:", err);
-    mostraPopup("Errore", "Impossibile caricare i dati");
-  } finally {
-    nascondiLoader();
+    console.error("Errore nel caricamento:", err);
+    alert("Errore nel caricamento dei dati. Riprova più tardi.");
   }
 }
 
-// ================= MOSTRA LISTA =================
 function mostra(lista = locali) {
-  const div = document.getElementById("lista");
-  div.innerHTML = "";
-  lista.forEach(l => {
-    const numCommenti = (l.commenti || []).length;
-    const c = document.createElement("div");
-    c.className = "card";
-    c.innerHTML = `
-      <div>
-        <h3>${l.nome}</h3>
-        <p><b>Zona:</b> ${l.zona}</p>
-        <p><b>Tipo:</b> ${l.tipo || "-"}</p>
-        ${l.link ? `<p><a href="${l.link}" target="_blank">Apri in Maps</a></p>` : ""}
-        <p><b>Voto:</b> ${l.voto || "–"} / <b>Consigliato da:</b> ${l.consigliatoDa || "–"}</p>
-        <p><b>Gluten free:</b> ${l.glutenFree || "–"}</p>
-        <p>${l.commento || ""}</p>
-        <button class="comment" onclick="apriCommenti('${l.ID}')">💬 ${numCommenti}</button>
-      </div>`;
-    div.appendChild(c);
+  const container = document.getElementById("lista");
+  container.innerHTML = "";
+  lista.forEach((loc, index) => {
+    container.innerHTML += `
+      <div class="card" id="card-${index}">
+        <div>
+          <strong>${loc.nome}</strong><br>
+          Zona: ${loc.zona} | Tipo: ${loc.tipo} | Voto: ${loc.voto || "—"} <br>
+          ${loc.link ? `<a href="${loc.link}" target="_blank">Mappa</a>` : ""}
+        </div>
+        <div class="actions">
+          <button class="edit" onclick="modifica(${index})">✎</button>
+          <button class="remove" onclick="rimuovi(${index})">×</button>
+        </div>
+      </div>
+    `;
   });
 }
 
-// ================= COMMENTI =================
-function apriCommenti(id) {
-  currentLocaleId = id;
-  const locale = locali.find(l => l.ID === id);
-  if (!locale) return;
-  const div = document.getElementById("listaCommenti");
-  div.innerHTML = "";
-
-  (locale.commenti || []).forEach(c => {
-    const p = document.createElement("p");
-    p.innerHTML = `<b>${c.Autore}</b> (${c.Data})<br>${c.Testo}`;
-    div.appendChild(p);
-  });
-
-  document.getElementById("popupCommenti").style.display = "flex";
-}
-
-function chiudiCommenti() {
-  document.getElementById("popupCommenti").style.display = "none";
-  document.getElementById("nuovoCommento").value = "";
-}
-
-async function aggiungiCommento() {
-  const testo = document.getElementById("nuovoCommento").value.trim();
-  if (!testo) return;
-  const locale = locali.find(l => l.ID === currentLocaleId);
-  if (!locale) return;
-
-  const nuovo = {
-    action: "addComment",
-    locale: locale.nome,
-    zona: locale.zona,
-    commento: {
-      autore: myName,
-      data: new Date().toLocaleDateString("it-IT"),
-      testo
-    }
-  };
-
-  mostraLoader();
-  await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(nuovo) });
-  mostraPopup("Commento aggiunto", "Il tuo commento è stato salvato 🍷");
-  chiudiCommenti();
-  await carica();
-}
-
-// ================= ZONE =================
-async function aggiungiZonaSeManca(nomeZona) {
-  if (!nomeZona) return;
-  if (zone.some(z => z.Zona.toLowerCase() === nomeZona.toLowerCase())) return;
-
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?city=Firenze&country=Italia&q=${encodeURIComponent(nomeZona)}&format=json&limit=1`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.length === 0) return;
-
-    const lat = data[0].lat;
-    const lon = data[0].lon;
-
-    const nuovo = {
-      resource: "zone",
-      action: "add",
-      Zona: nomeZona,
-      Latitudine: lat,
-      Longitudine: lon
-    };
-    await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(nuovo) });
-    zone.push(nuovo);
-  } catch (err) {
-    console.error("Errore aggiunta zona:", err);
-  }
-}
-
-// ================= GEOLOCALIZZAZIONE =================
-function distanzaKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function zonaPiuVicina(lat, lon) {
-  if (!zone.length) return null;
-  let min = Infinity, nome = null;
-  zone.forEach(z => {
-    const d = distanzaKm(lat, lon, parseFloat(z.Latitudine), parseFloat(z.Longitudine));
-    if (d < min) { min = d; nome = z.Zona; }
-  });
-  return nome;
-}
-
-async function filtraPiuVicino() {
-  if (!navigator.geolocation) {
-    mostraPopup("Errore", "Geolocalizzazione non supportata.");
-    return;
-  }
-  mostraLoader();
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      const zonaVicina = zonaPiuVicina(pos.coords.latitude, pos.coords.longitude);
-      const vicini = locali.filter(l => l.zona.toLowerCase() === zonaVicina.toLowerCase());
-      mostra(vicini);
-      mostraPopup("Più vicino a te", `Sei vicino a ${zonaVicina} 🍷`);
-      nascondiLoader();
-    },
-    () => {
-      mostraPopup("Errore", "Impossibile ottenere la posizione.");
-      nascondiLoader();
-    }
+function filtra() {
+  const zona = document.getElementById("zonaFilter").value;
+  const tipo = document.getElementById("tipoFilter").value;
+  let filtrati = locali.filter(l =>
+    (zona === "" || l.zona === zona) &&
+    (tipo === "" || l.tipo === tipo)
   );
+  mostra(filtrati);
 }
 
-// ================= AVVIO =================
-window.onload = carica;
-
-// disattiva il bottone "Casuale" se la funzione non esiste
 function randomLocale() {
-  mostraPopup("Funzione non disponibile", "In arrivo!");
+  if (locali.length === 0) { alert("Nessun locale disponibile"); return; }
+  const r = locali[Math.floor(Math.random() * locali.length)];
+  alert(`Prova: ${r.nome} (${r.tipo} in zona ${r.zona})`);
 }
+
+// funzioni segnaposto (da completare in step successivi)
+function aggiungi() { alert("Funzione Aggiungi in aggiornamento..."); }
+function rimuovi() { alert("Funzione Rimuovi in aggiornamento..."); }
+function modifica() { alert("Funzione Modifica in aggiornamento..."); }
+
+// Avvio iniziale
+window.addEventListener("load", caricaDati);
 </script>
-</body>
-</html>
 
