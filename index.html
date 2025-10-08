@@ -237,25 +237,41 @@
   function vaiAlModulo() { document.getElementById("formAggiungi").scrollIntoView({ behavior: "smooth" }); }
 async function geocodificaZonaClient(zona) {
   if (!zona) return { latitudine: "", longitudine: "" };
+
+  const q = `Firenze, ${zona}, Italia`;
+
+  // Tentativo 1: Nominatim ufficiale (con email nella query, niente header custom!)
   try {
-    const query = `Firenze, ${zona}, Italia`;
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": "LocaliFirenzeApp/1.0 (contact: maurodigirola@gmail.com)" }
-    });
-    const data = await res.json();
-    if (data.length > 0) {
-      return {
-        latitudine: parseFloat(data[0].lat),
-        longitudine: parseFloat(data[0].lon)
-      };
+    const u1 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&email=maurodigirola@gmail.com`;
+    const r1 = await fetch(u1); // nessun header custom!
+    if (r1.ok) {
+      const d1 = await r1.json();
+      if (Array.isArray(d1) && d1.length > 0) {
+        return { latitudine: parseFloat(d1[0].lat), longitudine: parseFloat(d1[0].lon) };
+      }
     }
-    return { latitudine: "", longitudine: "" };
   } catch (e) {
-    console.error("Errore geocodifica client:", e);
-    return { latitudine: "", longitudine: "" };
+    console.warn("Nominatim client fallita:", e);
   }
+
+  // Tentativo 2: geocode.maps.co (mirror OSM, spesso più permissivo su CORS)
+  try {
+    const u2 = `https://geocode.maps.co/search?q=${encodeURIComponent(q)}&limit=1`;
+    const r2 = await fetch(u2);
+    if (r2.ok) {
+      const d2 = await r2.json();
+      if (Array.isArray(d2) && d2.length > 0) {
+        return { latitudine: parseFloat(d2[0].lat), longitudine: parseFloat(d2[0].lon) };
+      }
+    }
+  } catch (e) {
+    console.warn("geocode.maps.co fallita:", e);
+  }
+
+  // Nessun risultato
+  return { latitudine: "", longitudine: "" };
 }
+
 
   async function aggiungi() {
   const nome = document.getElementById("nome").value.trim();
@@ -385,4 +401,5 @@ async function geocodificaZonaClient(zona) {
   </script>
 </body>
 </html>
+
 
