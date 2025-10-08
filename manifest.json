@@ -1,11 +1,10 @@
 {
-  "name": "LocaliFi",
+  "name": "Locali Firenze 2.0",
   "short_name": "LocaliFi",
-  "start_url": "./Locali_Firenze_04.html",
-  "scope": "./",
+  "start_url": "/locali2/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#ff7e5f",
+  "theme_color": "#ff7a5a",
   "icons": [
     {
       "src": "icon-192.png",
