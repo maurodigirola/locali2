@@ -50,32 +50,17 @@ function mostraLoader(show = true) {
   document.getElementById("loader").style.display = show ? "flex" : "none";
 }
 
-// funzione principale di caricamento
 async function carica() {
-  mostraLoader(true);
-  const listaDiv = document.getElementById("lista");
-  listaDiv.innerHTML = "<p>Caricamento in corso...</p>";
-
   try {
-    const res = await fetch(SCRIPT_URL + "?res=locali", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store"
-    });
-
-    if (!res.ok) throw new Error("Errore HTTP: " + res.status);
-
-    const data = await res.json();
-    locali = data;
+    const res = await fetch(SCRIPT_URL + "?res=locali");
+    const locali = await res.json();
     mostra(locali);
-
   } catch (err) {
-    console.error("Errore nel caricamento:", err);
-    listaDiv.innerHTML = `<p style="color:red;">Errore nel caricamento dati. Controlla che lo script Apps Script sia pubblico e attivo.</p>`;
-  } finally {
-    mostraLoader(false);
+    console.error("Errore nel caricamento dati:", err);
+    alert("Errore nel caricamento dati. Controlla che lo script Apps Script sia pubblico e attivo.");
   }
 }
+
 
 // mostra lista locali
 function mostra(lista) {
@@ -109,3 +94,4 @@ window.onload = carica;
 </script>
 </body>
 </html>
+
