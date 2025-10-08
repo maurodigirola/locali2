@@ -103,8 +103,9 @@
     try {
       mostraLoader();
       const res = await fetch(SCRIPT_URL_LOCALI);
-      const data = await res.json();
-      locali = data;
+   const data = await res.json();
+locali = data.locali || data;  // compatibile con entrambe le strutture
+
       const mapZone = {};
       data.forEach(l => {
         if (l.zona && l.lat && l.lon) mapZone[l.zona] = { lat: parseFloat(l.lat), lon: parseFloat(l.lon) };
@@ -259,4 +260,5 @@
   </script>
 </body>
 </html>
+
 
