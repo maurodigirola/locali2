@@ -99,23 +99,35 @@
   function mostraLoader() { document.getElementById("loader").style.display = "flex"; }
   function nascondiLoader() { document.getElementById("loader").style.display = "none"; }
 
-  async function carica() {
-    try {
-      mostraLoader();
-      const res = await fetch(SCRIPT_URL_LOCALI);
-   const data = await res.json();
-locali = data.locali || data;  // compatibile con entrambe le strutture
+async function carica() {
+  try {
+    mostraLoader();
+    const res = await fetch(SCRIPT_URL_LOCALI);
+    const data = await res.json();
 
-      const mapZone = {};
-      data.forEach(l => {
-        if (l.zona && l.lat && l.lon) mapZone[l.zona] = { lat: parseFloat(l.lat), lon: parseFloat(l.lon) };
-      });
-      zone = Object.entries(mapZone).map(([zona, coords]) => ({ zona, lat: coords.lat, lon: coords.lon }));
-      mostra();
-    } catch (e) {
-      console.error(e);
-    } finally { nascondiLoader(); }
+    // Gestione compatibile con due formati di risposta: [ ... ] oppure { locali: [ ... ] }
+    locali = Array.isArray(data) ? data : (data.locali || []);
+
+    // Estraggo le zone con coordinate
+    const mapZone = {};
+    locali.forEach(l => {
+      if (l.zona && l.lat && l.lon) {
+        mapZone[l.zona] = { lat: parseFloat(l.lat), lon: parseFloat(l.lon) };
+      }
+    });
+
+    zone = Object.entries(mapZone).map(([zona, coords]) => ({
+      zona, lat: coords.lat, lon: coords.lon
+    }));
+
+    mostra(); // aggiorna la visualizzazione
+  } catch (err) {
+    console.error("Errore caricamento dati:", err);
+  } finally {
+    nascondiLoader();
   }
+}
+
 
   function mostra(lista = locali) {
     const c = document.getElementById("lista");
@@ -260,5 +272,6 @@ locali = data.locali || data;  // compatibile con entrambe le strutture
   </script>
 </body>
 </html>
+
 
 
