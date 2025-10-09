@@ -627,7 +627,7 @@ c.innerHTML += `
     <div class="actions">
 
       <!-- STELLA DEI PREFERITI -->
- <button class="star ${isPreferito(loc.nome,loc.zona,loc.consigliatoDa) ? 'preferito' : ''}"
+<button class="star ${isPreferito(loc.nome,loc.zona,loc.consigliatoDa) ? 'preferito' : ''}"
   title="Aggiungi ai preferiti"
   onclick="togglePreferito(
     '${loc.nome.replace(/'/g, "\\'")}',
