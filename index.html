@@ -629,11 +629,11 @@ c.innerHTML += `
       <!-- STELLA DEI PREFERITI -->
 <button class="star ${isPreferito(loc.nome,loc.zona,loc.consigliatoDa) ? 'preferito' : ''}"
   title="Aggiungi ai preferiti"
-  onclick="togglePreferito(
-    '${loc.nome.replace(/'/g, "\\'")}',
-    '${loc.zona.replace(/'/g, "\\'")}',
-    '${(loc.consigliatoDa||"").replace(/'/g, "\\'")}'
-  )">
+onclick="togglePreferito(
+  '${loc.nome.replace(/'/g, '&#39;')}',
+  '${loc.zona.replace(/'/g, '&#39;')}',
+  '${(loc.consigliatoDa||'').replace(/'/g, '&#39;')}'
+)">
   ${isPreferito(loc.nome,loc.zona,loc.consigliatoDa) ? "\u2B50" : "\u2606"}
 </button>
 
