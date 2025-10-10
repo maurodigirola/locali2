@@ -502,17 +502,22 @@ function nascondiLoader() {
       });
     }
 
-    function creaDropdown(id, titolo, valori) {
-      const unici = [...new Set(valori.flatMap(v => v.split("+")))].filter(v => v);
-      const div = document.getElementById(id);
-      div.innerHTML = `
-        <div class="dropdown-btn" data-titolo="${titolo}" onclick="toggleDropdown('${id}', event)">${titolo}</div>
-        <div class="dropdown-content">
-          <label><input type="checkbox" value="__ALL__" checked onchange="selezionaTutti('${id}', this)"> Tutti</label>
-          ${unici.map(v => `<label><input type="checkbox" value="${v}" onchange="aggiornaTesto('${id}')"> ${v}</label>`).join("")}
-        </div>
-      `;
-    }
+function creaDropdown(id, titolo, valori) {
+  const unici = [...new Set(valori.flatMap(v => v.split("+")))].filter(v => v);
+  const div = document.getElementById(id);
+
+  div.innerHTML = `
+    <div class="dropdown-btn" data-titolo="${titolo}" onclick="toggleDropdown('${id}', event)">${titolo}</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" value="__ALL__" checked onchange="selezionaTutti('${id}', this)"> Tutti</label>
+      ${unici.map(v => {
+        const label = v === "__vicina__" ? "📍 Zona più vicina" : v; // 👈 qui cambiamo solo la label visiva
+        return `<label><input type="checkbox" value="${v}" onchange="aggiornaTesto('${id}')"> ${label}</label>`;
+      }).join("")}
+    </div>
+  `;
+}
+
 // --- Ricerca per nome ---
 function cercaPerNome() {
   const query = document.getElementById("searchInput").value.toLowerCase().trim();
