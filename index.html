@@ -327,24 +327,25 @@ let ZONE_CACHE = [];
 async function caricaZone() {
   try {
     const res = await fetch(ZONE_API_URL);
-    ZONE_CACHE = await res.json(); // [{ zona, latitudine, longitudine }, ...]
+    const data = await res.json();
+
+    // verifica che sia un array valido
+    if (!Array.isArray(data)) {
+      throw new Error("Formato zone non valido");
+    }
+
+    ZONE_CACHE = data.filter(z => z.zona && z.latitudine && z.longitudine);
     ZONE_CACHE.sort((a, b) => a.zona.localeCompare(b.zona, 'it', { sensitivity: 'base' }));
-    console.log("Zone caricate:", ZONE_CACHE.length);
+
+    console.log("✅ Zone caricate:", ZONE_CACHE);
   } catch (e) {
     console.error('Errore nel caricamento delle zone:', e);
-    const sel = document.getElementById('zona');
-    sel.innerHTML = `<option value="">(errore nel caricamento)</option>`;
+    ZONE_CACHE = [];
   }
 }
 
 
 
-  } catch (e) {
-    console.error('Errore nel caricamento delle zone:', e);
-    const sel = document.getElementById('zona');
-    sel.innerHTML = `<option value="">(errore nel caricamento)</option>`;
-  }
-}
 
 function distanza(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -666,8 +667,8 @@ let lon = "";
 const zonaTrovata = ZONE_CACHE.find(z => z.zona.trim().toLowerCase() === zona.trim().toLowerCase());
 
 if (zonaTrovata) {
-  lat = zonaTrovata.latitudine;
-  lon = zonaTrovata.longitudine;
+lat = zonaTrovata.latitudine || zonaTrovata.Latitudine;
+lon = zonaTrovata.longitudine || zonaTrovata.Longitudine;
   console.log("Coordinate trovate nel foglio:", lat, lon);
 } else {
   // Se non ci sono nel foglio, geocodifica e salva
@@ -1020,52 +1021,56 @@ if (span) {
     }
 async function filtra() {
   let zone = getSelezionati("zonaFilter");
-  console.log("Zone selezionate:", zone);  // 👈 DEBUG
   const tipi = getSelezionati("tipoFilter");
   const cons = getSelezionati("consigliatoFilter");
   const gf = getSelezionati("glutenFilter");
-  // Se l’utente ha selezionato "Zona più vicina"
+
+  console.log("🔎 Zone selezionate:", zone);
+
+  // ✅ Se è stata selezionata "più vicina a me"
   if (zone.includes("__vicina__")) {
     try {
-      // Ottieni posizione attuale
       const pos = await ottieniPosizioneUtente();
-console.log("📍 Mia posizione:", pos);
-console.log("📍 ZONE_CACHE:", ZONE_CACHE);
+      console.log("📍 Mia posizione:", pos);
 
-      // Cerca la zona più vicina
+      if (!ZONE_CACHE || ZONE_CACHE.length === 0) {
+        throw new Error("ZONE_CACHE vuoto o non caricato");
+      }
+
       let best = null;
       let bestD = Infinity;
 
-      for (const z of ZONE_CACHE) {
-        const lat = parseFloat(z.latitudine);
-        const lon = parseFloat(z.longitudine);
-        if (!isFinite(lat) || !isFinite(lon)) continue;
-        const d = distanza(pos.lat, pos.lon, lat, lon);
-        if (d < bestD) {
-          bestD = d;
-          best = z;
+      ZONE_CACHE.forEach(z => {
+        const lat = parseFloat(z.latitudine || z.Latitudine);
+        const lon = parseFloat(z.longitudine || z.Longitudine);
+        if (isFinite(lat) && isFinite(lon)) {
+          const d = distanza(pos.lat, pos.lon, lat, lon);
+          if (d < bestD) {
+            bestD = d;
+            best = z;
+          }
         }
-      }
+      });
 
       if (best) {
-console.log("📍 Zona scelta:", best);
-
-        console.log("📍 Zona più vicina:", best.zona, `(${bestD.toFixed(2)} km)`);
-        zone = [best.zona]; // sostituisce "__vicina__" con la zona reale
+        console.log(`📍 Zona più vicina: ${best.zona} (${bestD.toFixed(2)} km)`);
+        zone = [best.zona];
       } else {
-        mostraPopup("Errore ❌", "Non sono riuscito a determinare la zona più vicina.");
+        mostraPopup("Errore ❌", "Non è stato possibile determinare la zona più vicina.");
         return;
       }
-
     } catch (e) {
+      console.error("Errore geolocalizzazione:", e);
       mostraPopup("Errore ❌", "Geolocalizzazione negata o non disponibile.");
       return;
     }
   }
 
-  // Ora filtriamo come sempre
-  const f = locali.filter(l =>
-    (zone.length === 0 || zone.includes(l.zona)) &&
+  console.log("✅ Zona finale per il filtro:", zone);
+
+  // ✅ Applica il filtro
+  const filtrati = locali.filter(l =>
+    (zone.length === 0 || zone.map(z => z.toLowerCase()).includes(l.zona.toLowerCase())) &&
     (tipi.length === 0 || tipi.some(t => l.tipo.split("+").includes(t))) &&
     (
       cons.length === 0 ||
@@ -1078,7 +1083,8 @@ console.log("📍 Zona scelta:", best);
     (gf.length === 0 || gf.includes(l.glutenFree))
   );
 
-  mostra(f);
+  console.log(`✅ Locali trovati: ${filtrati.length}`);
+  mostra(filtrati);
 }
 
 
@@ -1177,8 +1183,12 @@ console.log("📍 Zona scelta:", best);
 function chiudiPopupAggiunto() {
   document.getElementById("popupAggiunto").style.display = "none";
 }
-caricaZone();
-  carica(); 
+// ✅ Carica tutto SOLO dopo che il DOM è pronto e le zone sono state scaricate
+window.addEventListener("DOMContentLoaded", async () => {
+  await caricaZone();
+  console.log("✅ Zone caricate:", ZONE_CACHE);
+  await carica();
+});
   </script>
 
    
