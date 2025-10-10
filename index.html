@@ -321,31 +321,33 @@ const SCRIPT_URL_LOCALI = "https://script.google.com/macros/s/AKfycbyf88jHp8K5e9
 const SCRIPT_URL_COMMENTI = "https://script.google.com/macros/s/AKfycbz4TW5Ixv7uSjhtG_nsoDku0P0TxrbWsFFRmwNdWxxRJfCCW_lbwCP59CG6P9eysfRzVA/exec";
 
 
-const ZONE_API_URL = "https://script.google.com/macros/s/AKfycbxWxQQnGhd0nU1hpZoXOwmMm9E_jlO8FSjbRHj_x2x-pSItDxFKUahGpoq5yH9KG9pG/exec";
+const ZONE_API_URL = "https://script.google.com/macros/s/AKfycbwe7FjCPGZZN7ZHhjjf-Fnz3XctYZIDYOlRHZmpGKOS6BXFHxWcu7U5Kw73WkBtwtWK/exec";
 let ZONE_CACHE = [];
 
 async function caricaZone() {
   try {
     const res = await fetch(ZONE_API_URL);
-    const data = await res.json();
+    ZONE_CACHE = await res.json(); // [{zona, latitudine, longitudine}, ...]
+    ZONE_CACHE.sort((a,b) => a.zona.localeCompare(b.zona, 'it', {sensitivity: 'base'}));
 
-    // verifica che sia un array valido
-    if (!Array.isArray(data)) {
-      throw new Error("Formato zone non valido");
-    }
-
-    ZONE_CACHE = data.filter(z => z.zona && z.latitudine && z.longitudine);
-    ZONE_CACHE.sort((a, b) => a.zona.localeCompare(b.zona, 'it', { sensitivity: 'base' }));
-
-    console.log("✅ Zone caricate:", ZONE_CACHE);
+async function caricaZone() {
+  try {
+    const res = await fetch(ZONE_API_URL);
+    ZONE_CACHE = await res.json(); // [{zona, latitudine, longitudine}, ...]
+    ZONE_CACHE.sort((a,b) => a.zona.localeCompare(b.zona, 'it', {sensitivity: 'base'}));
+    console.log("Zone caricate:", ZONE_CACHE.length);
   } catch (e) {
     console.error('Errore nel caricamento delle zone:', e);
-    ZONE_CACHE = [];
   }
 }
 
 
-
+  } catch (e) {
+    console.error('Errore nel caricamento delle zone:', e);
+    const sel = document.getElementById('zona');
+    sel.innerHTML = `<option value="">(errore nel caricamento)</option>`;
+  }
+}
 
 function distanza(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -542,17 +544,12 @@ function aggiornaFiltri() {
     "Miei locali",
     ...cons.filter(c => (c || "").trim().toLowerCase() !== safeName)
   ];
-function creaDropdown(id, titolo, valori) {
-  const unici = [...new Set(valori.flatMap(v => v.split("+")))].filter(v => v);
-  const div = document.getElementById(id);
-  div.innerHTML = `
-    <div class="dropdown-btn" data-titolo="${titolo}" onclick="toggleDropdown('${id}', event)">${titolo}</div>
-    <div class="dropdown-content">
-      <label><input type="checkbox" value="__ALL__" checked onchange="selezionaTutti('${id}', this)"> Tutti</label>
-      ${unici.map(v => `<label><input type="checkbox" value="${v}"> ${v === "__vicina__" ? "📍 Zona più vicina" : v}</label>`).join("")}
-    </div>
-  `;
-}
+
+  // ✅ Crea dropdown con l’opzione “📍 Zona più vicina”
+  creaDropdown("zonaFilter", "Tutte le zone", zone.map(z => z === "__vicina__" ? "📍 Zona più vicina" : z));
+  creaDropdown("tipoFilter", "Tutti i tipi", tipi);
+  creaDropdown("consigliatoFilter", "Tutti i consiglieri", consWithMine);
+  creaDropdown("glutenFilter", "Gluten free", gf);
 }
 
     function toggleDropdown(id, event) {
@@ -667,8 +664,8 @@ let lon = "";
 const zonaTrovata = ZONE_CACHE.find(z => z.zona.trim().toLowerCase() === zona.trim().toLowerCase());
 
 if (zonaTrovata) {
-lat = zonaTrovata.latitudine || zonaTrovata.Latitudine;
-lon = zonaTrovata.longitudine || zonaTrovata.Longitudine;
+  lat = zonaTrovata.latitudine;
+  lon = zonaTrovata.longitudine;
   console.log("Coordinate trovate nel foglio:", lat, lon);
 } else {
   // Se non ci sono nel foglio, geocodifica e salva
@@ -1019,58 +1016,55 @@ if (span) {
         .map(cb => cb.value)
         .filter(v => v !== "__ALL__");
     }
-async function filtra() {
+   async function filtra() {
+
   let zone = getSelezionati("zonaFilter");
   const tipi = getSelezionati("tipoFilter");
   const cons = getSelezionati("consigliatoFilter");
   const gf = getSelezionati("glutenFilter");
 
-  console.log("🔎 Zone selezionate:", zone);
-
-  // ✅ Se è stata selezionata "più vicina a me"
+  // Se l’utente ha selezionato "Zona più vicina"
   if (zone.includes("__vicina__")) {
     try {
+      // Ottieni posizione attuale
       const pos = await ottieniPosizioneUtente();
-      console.log("📍 Mia posizione:", pos);
+console.log("📍 Mia posizione:", pos);
+console.log("📍 ZONE_CACHE:", ZONE_CACHE);
 
-      if (!ZONE_CACHE || ZONE_CACHE.length === 0) {
-        throw new Error("ZONE_CACHE vuoto o non caricato");
-      }
-
+      // Cerca la zona più vicina
       let best = null;
       let bestD = Infinity;
 
-      ZONE_CACHE.forEach(z => {
-        const lat = parseFloat(z.latitudine || z.Latitudine);
-        const lon = parseFloat(z.longitudine || z.Longitudine);
-        if (isFinite(lat) && isFinite(lon)) {
-          const d = distanza(pos.lat, pos.lon, lat, lon);
-          if (d < bestD) {
-            bestD = d;
-            best = z;
-          }
+      for (const z of ZONE_CACHE) {
+        const lat = parseFloat(z.latitudine);
+        const lon = parseFloat(z.longitudine);
+        if (!isFinite(lat) || !isFinite(lon)) continue;
+        const d = distanza(pos.lat, pos.lon, lat, lon);
+        if (d < bestD) {
+          bestD = d;
+          best = z;
         }
-      });
+      }
 
       if (best) {
-        console.log(`📍 Zona più vicina: ${best.zona} (${bestD.toFixed(2)} km)`);
-        zone = [best.zona];
+console.log("📍 Zona scelta:", best);
+
+        console.log("📍 Zona più vicina:", best.zona, `(${bestD.toFixed(2)} km)`);
+        zone = [best.zona]; // sostituisce "__vicina__" con la zona reale
       } else {
-        mostraPopup("Errore ❌", "Non è stato possibile determinare la zona più vicina.");
+        mostraPopup("Errore ❌", "Non sono riuscito a determinare la zona più vicina.");
         return;
       }
+
     } catch (e) {
-      console.error("Errore geolocalizzazione:", e);
       mostraPopup("Errore ❌", "Geolocalizzazione negata o non disponibile.");
       return;
     }
   }
 
-  console.log("✅ Zona finale per il filtro:", zone);
-
-  // ✅ Applica il filtro
-  const filtrati = locali.filter(l =>
-    (zone.length === 0 || zone.map(z => z.toLowerCase()).includes(l.zona.toLowerCase())) &&
+  // Ora filtriamo come sempre
+  const f = locali.filter(l =>
+    (zone.length === 0 || zone.includes(l.zona)) &&
     (tipi.length === 0 || tipi.some(t => l.tipo.split("+").includes(t))) &&
     (
       cons.length === 0 ||
@@ -1083,8 +1077,7 @@ async function filtra() {
     (gf.length === 0 || gf.includes(l.glutenFree))
   );
 
-  console.log(`✅ Locali trovati: ${filtrati.length}`);
-  mostra(filtrati);
+  mostra(f);
 }
 
 
@@ -1183,12 +1176,8 @@ async function filtra() {
 function chiudiPopupAggiunto() {
   document.getElementById("popupAggiunto").style.display = "none";
 }
-// ✅ Carica tutto SOLO dopo che il DOM è pronto e le zone sono state scaricate
-window.addEventListener("DOMContentLoaded", async () => {
-  await caricaZone();
-  console.log("✅ Zone caricate:", ZONE_CACHE);
-  await carica();
-});
+caricaZone();
+  carica(); 
   </script>
 
    
@@ -1230,10 +1219,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
 
 
 
