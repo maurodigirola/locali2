@@ -327,19 +327,16 @@ let ZONE_CACHE = [];
 async function caricaZone() {
   try {
     const res = await fetch(ZONE_API_URL);
-    ZONE_CACHE = await res.json(); // [{zona, latitudine, longitudine}, ...]
-    ZONE_CACHE.sort((a,b) => a.zona.localeCompare(b.zona, 'it', {sensitivity: 'base'}));
-
-async function caricaZone() {
-  try {
-    const res = await fetch(ZONE_API_URL);
-    ZONE_CACHE = await res.json(); // [{zona, latitudine, longitudine}, ...]
-    ZONE_CACHE.sort((a,b) => a.zona.localeCompare(b.zona, 'it', {sensitivity: 'base'}));
+    ZONE_CACHE = await res.json(); // [{ zona, latitudine, longitudine }, ...]
+    ZONE_CACHE.sort((a, b) => a.zona.localeCompare(b.zona, 'it', { sensitivity: 'base' }));
     console.log("Zone caricate:", ZONE_CACHE.length);
   } catch (e) {
     console.error('Errore nel caricamento delle zone:', e);
+    const sel = document.getElementById('zona');
+    sel.innerHTML = `<option value="">(errore nel caricamento)</option>`;
   }
 }
+
 
 
   } catch (e) {
@@ -544,12 +541,17 @@ function aggiornaFiltri() {
     "Miei locali",
     ...cons.filter(c => (c || "").trim().toLowerCase() !== safeName)
   ];
-
-  // ✅ Crea dropdown con l’opzione “📍 Zona più vicina”
-  creaDropdown("zonaFilter", "Tutte le zone", zone.map(z => z === "__vicina__" ? "📍 Zona più vicina" : z));
-  creaDropdown("tipoFilter", "Tutti i tipi", tipi);
-  creaDropdown("consigliatoFilter", "Tutti i consiglieri", consWithMine);
-  creaDropdown("glutenFilter", "Gluten free", gf);
+function creaDropdown(id, titolo, valori) {
+  const unici = [...new Set(valori.flatMap(v => v.split("+")))].filter(v => v);
+  const div = document.getElementById(id);
+  div.innerHTML = `
+    <div class="dropdown-btn" data-titolo="${titolo}" onclick="toggleDropdown('${id}', event)">${titolo}</div>
+    <div class="dropdown-content">
+      <label><input type="checkbox" value="__ALL__" checked onchange="selezionaTutti('${id}', this)"> Tutti</label>
+      ${unici.map(v => `<label><input type="checkbox" value="${v}"> ${v === "__vicina__" ? "📍 Zona più vicina" : v}</label>`).join("")}
+    </div>
+  `;
+}
 }
 
     function toggleDropdown(id, event) {
@@ -1218,6 +1220,7 @@ caricaZone();
 
 </body>
 </html>
+
 
 
 
