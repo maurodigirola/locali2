@@ -1016,13 +1016,12 @@ if (span) {
         .map(cb => cb.value)
         .filter(v => v !== "__ALL__");
     }
-   async function filtra() {
-
+async function filtra() {
   let zone = getSelezionati("zonaFilter");
+  console.log("Zone selezionate:", zone);  // 👈 DEBUG
   const tipi = getSelezionati("tipoFilter");
   const cons = getSelezionati("consigliatoFilter");
   const gf = getSelezionati("glutenFilter");
-
   // Se l’utente ha selezionato "Zona più vicina"
   if (zone.includes("__vicina__")) {
     try {
@@ -1219,6 +1218,7 @@ caricaZone();
 
 </body>
 </html>
+
 
 
 
