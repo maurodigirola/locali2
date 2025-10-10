@@ -547,7 +547,7 @@ function aggiornaFiltri() {
   ];
 
   // ✅ Crea dropdown con l’opzione “📍 Zona più vicina”
-  creaDropdown("zonaFilter", "Tutte le zone", zone.map(z => z === "__vicina__" ? "📍 Zona più vicina" : z));
+creaDropdown("zonaFilter", "Tutte le zone", zone.map(z => z === "__vicina__" ? "__vicina__" : z));
   creaDropdown("tipoFilter", "Tutti i tipi", tipi);
   creaDropdown("consigliatoFilter", "Tutti i consiglieri", consWithMine);
   creaDropdown("glutenFilter", "Gluten free", gf);
@@ -1220,7 +1220,6 @@ caricaZone();
 
 </body>
 </html>
-
 
 
 
