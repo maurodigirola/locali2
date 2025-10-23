@@ -395,13 +395,9 @@ const SCRIPT_URL_COMMENTI = "https://script.google.com/macros/s/AKfycbz4TW5Ixv7u
 const ZONE_API_URL = "https://script.google.com/macros/s/AKfycbxWxQQnGhd0nU1hpZoXOwmMm9E_jlO8FSjbRHj_x2x-pSItDxFKUahGpoq5yH9KG9pG/exec";
 let ZONE_CACHE = [];
 
-const SCRIPT_URL_PREFERITI = "https://script.google.com/macros/s/AKfycbyP_xtWQpW0U8CfF8Rfhus32lF1DiAnWfdtiDzTZbJYw2Pb4mioH5sY7YvcId4YP1okMw/exec";
+const SCRIPT_URL_PREFERITI = "https://script.google.com/macros/s/AKfycby-GYRrVFYgHh1iAXuHcQc0ohxY6NHC-ob-TOP5T8qNGTYwBUXiTMNnTBQrX8Ngj2mxUw/exec";
 
-async function caricaZone() {
-  try {
-    const res = await fetch(ZONE_API_URL);
-    ZONE_CACHE = await res.json(); // [{zona, latitudine, longitudine}, ...]
-    ZONE_CACHE.sort((a,b) => a.zona.localeCompare(b.zona, 'it', {sensitivity: 'base'}));
+
 
 async function caricaZone() {
   try {
@@ -1435,7 +1431,6 @@ caricaZone();
 
 </body>
 </html>
-
 
 
 
