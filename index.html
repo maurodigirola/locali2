@@ -30,23 +30,41 @@
       overflow-y: auto; 
       padding-right: 5px; 
     }
-    .card { 
-      background: white; padding: 15px; border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .card div {
-      max-width: 220px;
-      word-wrap: break-word;
-      white-space: normal;
-    }
-    .card a { color: #0077cc; text-decoration: none; }
-.actions {
+.card {
   display: flex;
-  flex-direction: column;
-  align-items: center; /* centra tutti i bottoni nella colonna */
-  gap: 8px;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
+
+.star {
+  background-color: #e0e0e0; /* cerchio grigio */
+  color: #888; /* stella grigia */
+  font-size: 16px;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.2s, color 0.2s;
+}
+
+.star:hover {
+  transform: scale(1.1);
+}
+
+/* stella selezionata: cerchio e stella gialli */
+.star.preferito {
+  background-color: #ffb400;
+  color: white;
+}
+
     .remove { background: #ff4d4d; border: none; border-radius: 50%; color: white; font-weight: bold; width: 30px; height: 30px; cursor: pointer; }
     .edit { background: #ffa500; border: none; border-radius: 50%; color: white; font-weight: bold; width: 30px; height: 30px; cursor: pointer; }
 .comment {
@@ -116,23 +134,74 @@
   align-items: center;
   justify-content: center;
 }
+/* contenitore dei pulsanti */
+.actions {
+  background: none;       /* ← elimina sfondo */
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
 
+/* stile uniforme per i pulsanti */
+.actions button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: transform 0.15s ease, opacity 0.2s;
+}
+.actions button:hover {
+  transform: scale(1.1);
+  opacity: 0.9;
+}
+
+/* stella: cerchio grigio + stella grigia */
+.star {
+  background-color: #e0e0e0; /* cerchio grigio */
+  color: #888; /* stella grigia */
+}
+
+/* stella selezionata: cerchio e stella gialli */
+.star.preferito {
+  background-color: #ffb400; /* giallo */
+  color: white;
+}
+
+/* altre icone */
+.edit {
+  background-color: #ffa500;
+  color: white;
+}
+
+.remove {
+  background-color: #ff4d4d;
+  color: white;
+}
+
+.comment {
+  background-color: #ff9966;
+  color: white;
+}
+
+/* contatore commenti */
+.comment-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
 .comment-count {
-  margin-right: 6px;   /* spazio tra numero e nuvoletta */
+  font-size: 12px;
+  color: #ff9966;
   font-weight: bold;
-  color: #ff7e5f;
-  font-size: 14px;
-  min-width: 14px;
-  text-align: right;
 }
-
-.comment-container .comment-count {
-  font-weight: bold;
-  color: #ff7e5f;
-  font-size: 14px;
-}
-
-
   </style>
 </head>
 	
@@ -148,6 +217,7 @@
   </div>
   <div class="filter-buttons">
     <button onclick="filtra()">Filtra</button><br><br>
+<button onclick="filtraPreferiti()">Filtra preferiti ⭐</button>
     <button onclick="randomLocale()">Casuale 🎲</button>
 <button onclick="vaiAlModulo()">Aggiungi ➕</button>
 <div class="menu">
@@ -325,6 +395,8 @@ const SCRIPT_URL_COMMENTI = "https://script.google.com/macros/s/AKfycbz4TW5Ixv7u
 const ZONE_API_URL = "https://script.google.com/macros/s/AKfycbxWxQQnGhd0nU1hpZoXOwmMm9E_jlO8FSjbRHj_x2x-pSItDxFKUahGpoq5yH9KG9pG/exec";
 let ZONE_CACHE = [];
 
+const SCRIPT_URL_PREFERITI = "https://script.google.com/macros/s/AKfycbyP_xtWQpW0U8CfF8Rfhus32lF1DiAnWfdtiDzTZbJYw2Pb4mioH5sY7YvcId4YP1okMw/exec";
+
 async function caricaZone() {
   try {
     const res = await fetch(ZONE_API_URL);
@@ -348,6 +420,37 @@ async function caricaZone() {
     const sel = document.getElementById('zona');
     sel.innerHTML = `<option value="">(errore nel caricamento)</option>`;
   }
+}
+function filtraPreferiti() {
+  // ottieni tutti i locali che sono preferiti
+  const preferiti = locali.filter(l => l.preferito === "si");
+
+  if (preferiti.length === 0) {
+    mostraPopup("Nessun preferito ⭐", "Non hai ancora aggiunto locali ai preferiti");
+    return;
+  }
+
+  // poi applichiamo anche gli altri filtri esistenti (zona, tipo, ecc.)
+  const zone = getSelezionati("zonaFilter");
+  const tipi = getSelezionati("tipoFilter");
+  const cons = getSelezionati("consigliatoFilter");
+  const gf = getSelezionati("glutenFilter");
+
+  const f = preferiti.filter(l =>
+    (zone.length === 0 || zone.includes(l.zona)) &&
+    (tipi.length === 0 || tipi.some(t => l.tipo.split("+").includes(t))) &&
+    (
+      cons.length === 0 ||
+      (
+        cons.includes("Miei locali") &&
+        (l.consigliatoDa || "").trim().toLowerCase() === myName.trim().toLowerCase()
+      ) ||
+      cons.includes((l.consigliatoDa || "—").trim())
+    ) &&
+    (gf.length === 0 || gf.includes(l.glutenFree))
+  );
+
+  mostra(f);
 }
 
 function distanza(lat1, lon1, lat2, lon2) {
@@ -387,24 +490,28 @@ async function carica() {
   try {
     mostraLoader();
 
-    // scarica locali e commenti in parallelo
-    const [resLocali, resCommenti] = await Promise.all([
-      fetch(SCRIPT_URL_LOCALI),
-      fetch(SCRIPT_URL_COMMENTI)
-    ]);
+    // scarica locali, commenti e preferiti in parallelo
+const [resLocali, resCommenti, resPreferiti] = await Promise.all([
+  fetch(SCRIPT_URL_LOCALI),
+  fetch(SCRIPT_URL_COMMENTI),
+  fetch(SCRIPT_URL_PREFERITI + "?action=getPreferiti&utente=" + encodeURIComponent(myName))
+]);
+
 
     locali = await resLocali.json();
     const commenti = await resCommenti.json();
+    const preferiti = await resPreferiti.json();
 
-    // associa i commenti ai locali
-    locali.forEach(l => l.commenti = []);
+    console.log("Locali:", locali.length, "Commenti:", commenti.length, "Preferiti:", preferiti.length);
+
+    // collega i commenti ai rispettivi locali
     commenti.forEach(c => {
-     const loc = locali.find(l =>
-  l.nome.trim().toLowerCase() === c.locale.trim().toLowerCase() &&
-  l.zona.trim().toLowerCase() === c.zona.trim().toLowerCase()
-);
-
+      const loc = locali.find(l =>
+        l.nome === c.locale &&
+        l.zona === c.zona
+      );
       if (loc) {
+        if (!loc.commenti) loc.commenti = [];
         loc.commenti.push({
           autore: c.autore,
           data: c.data,
@@ -413,14 +520,56 @@ async function carica() {
       }
     });
 
-    mostra();
+    // segna i preferiti dell’utente corrente
+    locali.forEach(l => {
+      const pref = preferiti.find(p =>
+        p.nome === l.nome &&
+        p.zona === l.zona &&
+        p.utente.trim().toLowerCase() === myName.trim().toLowerCase() &&
+        p.stato === "si"
+      );
+      l.preferito = pref ? "si" : "no";
+    });
 
+    mostra();
   } catch (err) {
     console.error("Errore caricamento dati:", err);
+    mostraPopup("Errore ❌", "Impossibile caricare i dati dal server.");
   } finally {
     nascondiLoader();
   }
 }
+async function caricaDati() {
+  try {
+    const res = await fetch(SCRIPT_URL_LOCALI + "?action=getLocali");
+    const datiLocali = await res.json();
+    const preferiti = await caricaPreferiti();
+
+    // Unione dei due dataset
+    locali = datiLocali.map(loc => {
+      const pref = preferiti.find(p => 
+        p.nome === loc.nome && p.zona === loc.zona && p.stato === "si"
+      );
+      return { ...loc, preferito: pref ? "si" : "no" };
+    });
+
+    mostra();
+  } catch (err) {
+    console.error("Errore caricamento dati:", err);
+  }
+}
+
+async function caricaPreferiti() {
+  try {
+    const res = await fetch(SCRIPT_URL_PREFERITI + "?action=getPreferiti&utente=" + encodeURIComponent(myName));
+    const dati = await res.json();
+    return dati; // [{ nome: "Circolo Aurora", zona: "San Frediano", stato: "si" }, ...]
+  } catch (e) {
+    console.error("Errore caricamento preferiti:", e);
+    return [];
+  }
+}
+
 function mostraPopup(titolo, messaggio) {
   document.getElementById("popupTitolo").textContent = titolo || "";
   document.getElementById("popupMessaggio").textContent = messaggio || "";
@@ -568,7 +717,10 @@ creaDropdown("zonaFilter", "Tutte le zone", zone.map(z => z === "__vicina__" ? "
       const btn = document.querySelector(`#${id} .dropdown-btn`);
       const selezionati = getSelezionati(id).filter(v => v !== "__ALL__");
       if (selezionati.length === 0) { btn.textContent = btn.dataset.titolo; document.querySelector(`#${id} input[value="__ALL__"]`).checked = true; }
-      else if (selezionati.length === 1) { btn.textContent = selezionati[0]; document.querySelector(`#${id} input[value="__ALL__"]`).checked = false; }
+     else if (selezionati.length === 1) { 
+  btn.textContent = selezionati[0] === "__vicina__" ? "📍 Zona più vicina" : selezionati[0];
+  document.querySelector(`#${id} input[value="__ALL__"]`).checked = false; 
+}
       else { btn.textContent = selezionati.length + " selezionati"; document.querySelector(`#${id} input[value="__ALL__"]`).checked = false; }
     }
     function selezionaTutti(id) {
@@ -586,52 +738,58 @@ function mostra(lista = locali) {
   aggiornaFiltri();
   const c = document.getElementById("lista");
   c.innerHTML = "";
+
   lista.forEach((loc) => {
-    const idxGlobale = locali.findIndex(x => 
+    const idxGlobale = locali.findIndex(x =>
       x.nome === loc.nome &&
       x.zona === loc.zona &&
       (x.consigliatoDa || "—") === (loc.consigliatoDa || "—")
     );
 
     // Controlli permessi
-   const isOwner = (loc.consigliatoDa || "").trim().toLowerCase() === myName.trim().toLowerCase();
+    const isOwner = (loc.consigliatoDa || "").trim().toLowerCase() === myName.trim().toLowerCase();
+    const isAdmin = myName.trim().toLowerCase() === "mauro di girolamo";
 
-   const isAdmin = myName.trim().toLowerCase() === "mauro di girolamo";
-
-
-    // Conta i commenti
+    // Conteggio commenti
     const numCommenti = loc.commenti ? loc.commenti.length : 0;
 
     // Costruzione HTML
     c.innerHTML += `
-      <div class="card" data-idx="${idxGlobale}">
-        <div>
-          <strong>${loc.nome}</strong> ${loc.glutenFree==="si" ? "🌾🚫" : ""}<br>
+     <div class="card" data-idx="${idxGlobale}">
+  <div>
+
+          <strong>${loc.nome}</strong> ${loc.glutenFree === "si" ? "🌾🚫" : ""}<br>
           Zona: ${loc.zona} <br>
           Tipo: ${loc.tipo} <br>
           Voto: ${loc.voto || "—"}<br>
           Consigliato da: ${loc.consigliatoDa || "—"}<br>
           <a href="${loc.link}" target="_blank">Link</a>
         </div>
-        <div class="actions">
-          ${
-            (isOwner || isAdmin)
-              ? `
-                <button class="edit" onclick="modifica(${idxGlobale})">✎</button>
-                <button class="remove" onclick="rimuovi(${idxGlobale})">×</button>
-              `
-              : ""
-          }
-<div class="comment-container">
-  <button class="comment" title="Commenti" onclick="apriCommenti(${idxGlobale})">💬</button>
-  <span class="comment-count">${loc.commenti ? loc.commenti.length : 0}</span>
+<div class="actions">
+  <button class="star ${loc.preferito === 'si' ? 'preferito' : ''}" onclick="togglePreferito(${idxGlobale})">
+    ★
+  </button>
+
+  ${(isOwner || isAdmin)
+    ? `
+      <button class="edit" onclick="modifica(${idxGlobale})">✎</button>
+      <button class="remove" onclick="rimuovi(${idxGlobale})">×</button>
+    `
+    : ""
+  }
+
+  <div class="comment-container">
+    <button class="comment" title="Commenti" onclick="apriCommenti(${idxGlobale})">💬</button>
+    <span class="comment-count">${numCommenti}</span>
+  </div>
 </div>
 
 
-        </div>
-      </div>`;
+      </div>
+    `;
   });
 }
+
 
 // Funzione per ottenere latitudine e longitudine da una zona
 async function geocodificaZona(zona) {
@@ -909,6 +1067,48 @@ async function rimuovi(i) {
   }
 }
 
+async function togglePreferito(i) {
+  const loc = locali[i];
+  const nuovoStato = (loc.preferito === 'si') ? 'no' : 'si';
+  loc.preferito = nuovoStato;
+
+  const card = document.querySelector(`.card[data-idx="${i}"]`);
+  const starEl = card?.querySelector(".star");
+  if (starEl) {
+    starEl.classList.toggle("preferito", nuovoStato === "si");
+  }
+
+  // ✅ payload coerente con lo Sheet
+  const payload = {
+    action: "toggle",
+    utente: myName,
+    nome: loc.nome,
+    stato: nuovoStato,
+    zona: loc.zona
+  };
+
+  try {
+    const res = await fetch(SCRIPT_URL_PREFERITI, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await res.text();
+    console.log("Risposta server:", text);
+
+    // se vuoi un feedback visivo in caso di errore
+    const data = JSON.parse(text);
+    if (data.result !== "OK") {
+      throw new Error(data.message || "Errore dal server");
+    }
+
+  } catch (err) {
+    console.error("Errore salvataggio preferito:", err);
+    mostraPopup("Errore ❌", "Problema nel salvataggio del preferito (" + err.message + ")");
+  }
+}
+
 
 
     // --- Commento ---
@@ -1029,46 +1229,56 @@ if (span) {
   const cons = getSelezionati("consigliatoFilter");
   const gf = getSelezionati("glutenFilter");
 
-  // Se l’utente ha selezionato "Zona più vicina"
-  if (zone.includes("__vicina__")) {
-    try {
-      // Ottieni posizione attuale
-      const pos = await ottieniPosizioneUtente();
-console.log("📍 Mia posizione:", pos);
-console.log("📍 ZONE_CACHE:", ZONE_CACHE);
+// Se l’utente ha selezionato "Zona più vicina"
+if (zone.includes("__vicina__")) {
+  try {
+    mostraLoader(); // 👈 mostra loader mentre calcola
 
-      // Cerca la zona più vicina
-      let best = null;
-      let bestD = Infinity;
+    // Ottieni posizione attuale
+    const pos = await ottieniPosizioneUtente();
+    console.log("📍 Mia posizione:", pos);
 
-      for (const z of ZONE_CACHE) {
-        const lat = parseFloat(z.latitudine);
-        const lon = parseFloat(z.longitudine);
-        if (!isFinite(lat) || !isFinite(lon)) continue;
-        const d = distanza(pos.lat, pos.lon, lat, lon);
-        if (d < bestD) {
-          bestD = d;
-          best = z;
-        }
+    // Cerca la zona più vicina
+    let best = null;
+    let bestD = Infinity;
+
+    for (const z of ZONE_CACHE) {
+      const lat = parseFloat(z.latitudine);
+      const lon = parseFloat(z.longitudine);
+      if (!isFinite(lat) || !isFinite(lon)) continue;
+      const d = distanza(pos.lat, pos.lon, lat, lon);
+      if (d < bestD) {
+        bestD = d;
+        best = z;
+      }
+    }
+
+    if (best) {
+      console.log("📍 Zona più vicina:", best.zona, `(${bestD.toFixed(2)} km)`);
+
+      // 👇 Rimuovi "__vicina__" e aggiungi la zona trovata all'elenco
+      zone = zone.filter(z => z !== "__vicina__");
+      if (!zone.includes(best.zona)) {
+        zone.push(best.zona);
       }
 
-      if (best) {
-console.log("📍 Zona scelta:", best);
-
-        console.log("📍 Zona più vicina:", best.zona, `(${bestD.toFixed(2)} km)`);
-        zone = [best.zona]; // sostituisce "__vicina__" con la zona reale
-      } else {
-        mostraPopup("Errore ❌", "Non sono riuscito a determinare la zona più vicina.");
-        return;
-      }
-
-    } catch (e) {
-      mostraPopup("Errore ❌", "Geolocalizzazione negata o non disponibile.");
+    } else {
+      mostraPopup("Errore ❌", "Non sono riuscito a determinare la zona più vicina.");
       return;
     }
+
+  } catch (e) {
+    mostraPopup("Errore ❌", "Geolocalizzazione negata o non disponibile.");
+    return;
+  } finally {
+    nascondiLoader(); // 👈 nascondi loader sempre
   }
+}
+
 
   // Ora filtriamo come sempre
+nascondiLoader(); // 👈 nascondi il loader appena finito di calcolare la zona più vicina
+
   const f = locali.filter(l =>
     (zone.length === 0 || zone.includes(l.zona)) &&
     (tipi.length === 0 || tipi.some(t => l.tipo.split("+").includes(t))) &&
@@ -1225,8 +1435,6 @@ caricaZone();
 
 </body>
 </html>
-
-
 
 
 
