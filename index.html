@@ -30,16 +30,24 @@
       overflow-y: auto; 
       padding-right: 5px; 
     }
-.card {
+    .card { 
+      background: white; padding: 15px; border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .card div {
+      max-width: 220px;
+      word-wrap: break-word;
+      white-space: normal;
+    }
+    .card a { color: #0077cc; text-decoration: none; }
+.actions {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  background: white;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  flex-direction: column;
+  align-items: center; /* centra tutti i bottoni nella colonna */
+  gap: 8px;
 }
-
+/* --- STILE STELLA PREFERITO --- */
 .star {
   background-color: #e0e0e0; /* cerchio grigio */
   color: #888; /* stella grigia */
@@ -61,8 +69,8 @@
 
 /* stella selezionata: cerchio e stella gialli */
 .star.preferito {
-  background-color: #ffb400;
-  color: white;
+  background-color: #ffb400; /* giallo pieno */
+  color: white; /* stella bianca */
 }
 
     .remove { background: #ff4d4d; border: none; border-radius: 50%; color: white; font-weight: bold; width: 30px; height: 30px; cursor: pointer; }
@@ -134,74 +142,23 @@
   align-items: center;
   justify-content: center;
 }
-/* contenitore dei pulsanti */
-.actions {
-  background: none;       /* ← elimina sfondo */
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
 
-/* stile uniforme per i pulsanti */
-.actions button {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  transition: transform 0.15s ease, opacity 0.2s;
-}
-.actions button:hover {
-  transform: scale(1.1);
-  opacity: 0.9;
-}
-
-/* stella: cerchio grigio + stella grigia */
-.star {
-  background-color: #e0e0e0; /* cerchio grigio */
-  color: #888; /* stella grigia */
-}
-
-/* stella selezionata: cerchio e stella gialli */
-.star.preferito {
-  background-color: #ffb400; /* giallo */
-  color: white;
-}
-
-/* altre icone */
-.edit {
-  background-color: #ffa500;
-  color: white;
-}
-
-.remove {
-  background-color: #ff4d4d;
-  color: white;
-}
-
-.comment {
-  background-color: #ff9966;
-  color: white;
-}
-
-/* contatore commenti */
-.comment-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
 .comment-count {
-  font-size: 12px;
-  color: #ff9966;
+  margin-right: 6px;   /* spazio tra numero e nuvoletta */
   font-weight: bold;
+  color: #ff7e5f;
+  font-size: 14px;
+  min-width: 14px;
+  text-align: right;
 }
+
+.comment-container .comment-count {
+  font-weight: bold;
+  color: #ff7e5f;
+  font-size: 14px;
+}
+
+
   </style>
 </head>
 	
@@ -215,9 +172,13 @@
     <div class="dropdown" id="consigliatoFilter"></div>
     <div class="dropdown" id="glutenFilter"></div>
   </div>
+<div class="filters">
+  <label style="display:flex;align-items:center;gap:6px;">
+    <input type="checkbox" id="filtroPreferiti"> Solo preferiti ⭐
+  </label>
+</div>
   <div class="filter-buttons">
     <button onclick="filtra()">Filtra</button><br><br>
-<button onclick="filtraPreferiti()">Filtra preferiti ⭐</button>
     <button onclick="randomLocale()">Casuale 🎲</button>
 <button onclick="vaiAlModulo()">Aggiungi ➕</button>
 <div class="menu">
@@ -392,23 +353,15 @@ const SCRIPT_URL_LOCALI = "https://script.google.com/macros/s/AKfycbyf88jHp8K5e9
 const SCRIPT_URL_COMMENTI = "https://script.google.com/macros/s/AKfycbz4TW5Ixv7uSjhtG_nsoDku0P0TxrbWsFFRmwNdWxxRJfCCW_lbwCP59CG6P9eysfRzVA/exec";
 
 
+
 const ZONE_API_URL = "https://script.google.com/macros/s/AKfycbxWxQQnGhd0nU1hpZoXOwmMm9E_jlO8FSjbRHj_x2x-pSItDxFKUahGpoq5yH9KG9pG/exec";
 let ZONE_CACHE = [];
-
-const SCRIPT_URL_PREFERITI = "https://script.google.com/macros/s/AKfycby-GYRrVFYgHh1iAXuHcQc0ohxY6NHC-ob-TOP5T8qNGTYwBUXiTMNnTBQrX8Ngj2mxUw/exec";
-
-
 
 async function caricaZone() {
   try {
     const res = await fetch(ZONE_API_URL);
     ZONE_CACHE = await res.json(); // [{zona, latitudine, longitudine}, ...]
     ZONE_CACHE.sort((a,b) => a.zona.localeCompare(b.zona, 'it', {sensitivity: 'base'}));
-    console.log("Zone caricate:", ZONE_CACHE.length);
-  } catch (e) {
-    console.error('Errore nel caricamento delle zone:', e);
-  }
-}
 
 
   } catch (e) {
@@ -417,37 +370,8 @@ async function caricaZone() {
     sel.innerHTML = `<option value="">(errore nel caricamento)</option>`;
   }
 }
-function filtraPreferiti() {
-  // ottieni tutti i locali che sono preferiti
-  const preferiti = locali.filter(l => l.preferito === "si");
 
-  if (preferiti.length === 0) {
-    mostraPopup("Nessun preferito ⭐", "Non hai ancora aggiunto locali ai preferiti");
-    return;
-  }
 
-  // poi applichiamo anche gli altri filtri esistenti (zona, tipo, ecc.)
-  const zone = getSelezionati("zonaFilter");
-  const tipi = getSelezionati("tipoFilter");
-  const cons = getSelezionati("consigliatoFilter");
-  const gf = getSelezionati("glutenFilter");
-
-  const f = preferiti.filter(l =>
-    (zone.length === 0 || zone.includes(l.zona)) &&
-    (tipi.length === 0 || tipi.some(t => l.tipo.split("+").includes(t))) &&
-    (
-      cons.length === 0 ||
-      (
-        cons.includes("Miei locali") &&
-        (l.consigliatoDa || "").trim().toLowerCase() === myName.trim().toLowerCase()
-      ) ||
-      cons.includes((l.consigliatoDa || "—").trim())
-    ) &&
-    (gf.length === 0 || gf.includes(l.glutenFree))
-  );
-
-  mostra(f);
-}
 
 function distanza(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -479,6 +403,66 @@ function ottieniPosizioneUtente() {
     myName = "Anonimo";
   }
 }
+myName = myName.trim();
+const isAdmin = myName.toLowerCase() === "mauro di girolamo";
+
+// --- PREFERITI --- //
+const SCRIPT_URL_PREFERITI = "https://script.google.com/macros/s/AKfycbxVZbNQEGqfQjW9n9xlm_uIAvNPJgYAC9zeEYU4JF2HNrWoUnG7vOXhhHTll7-iXCTr/exec";
+
+let preferiti = JSON.parse(localStorage.getItem("preferiti")) || [];
+
+// Carica i preferiti dell’utente dal foglio Google
+async function caricaPreferitiDaSheet() {
+  try {
+    const res = await fetch(`${SCRIPT_URL_PREFERITI}?utente=${encodeURIComponent(myName)}`);
+    const dati = await res.json();
+    preferiti = dati
+      .filter(r => r.stato === "si")
+      .map(r => r.nome.trim().toLowerCase() + "|" + r.zona.trim().toLowerCase());
+    localStorage.setItem("preferiti", JSON.stringify(preferiti));
+    console.log("✅ Preferiti caricati da Sheet:", preferiti);
+  } catch (e) {
+    console.error("❌ Errore nel caricamento preferiti da Sheet:", e);
+  }
+}
+
+// Aggiunge o rimuove un preferito
+async function togglePreferito(nome, zona) {
+  const key = nome.trim().toLowerCase() + "|" + zona.trim().toLowerCase();
+  const idx = preferiti.indexOf(key);
+  let stato = "no";
+
+  if (idx >= 0) {
+    preferiti.splice(idx, 1); // rimuovi
+  } else {
+    preferiti.push(key); // aggiungi
+    stato = "si";
+  }
+
+  localStorage.setItem("preferiti", JSON.stringify(preferiti));
+
+  // aggiorna visivamente solo la stella cliccata
+  const card = document.querySelector(`.card button.star[onclick*="'${nome}'"]`);
+  if (card) card.classList.toggle("preferito");
+
+  // salva su Sheet
+  try {
+    await fetch(SCRIPT_URL_PREFERITI, {
+      method: "POST",
+      body: JSON.stringify({
+        utente: myName,
+        nome: nome,
+        zona: zona,
+        stato: stato
+      })
+    });
+    console.log(`📡 Preferito aggiornato su Sheet: ${nome} (${stato})`);
+  } catch (e) {
+    console.error("❌ Errore salvataggio preferito su Sheet:", e);
+  }
+}
+
+
     let locali = [];
 
     function salva() { localStorage.setItem("locali", JSON.stringify(locali)); }
@@ -486,28 +470,25 @@ async function carica() {
   try {
     mostraLoader();
 
-    // scarica locali, commenti e preferiti in parallelo
-const [resLocali, resCommenti, resPreferiti] = await Promise.all([
-  fetch(SCRIPT_URL_LOCALI),
-  fetch(SCRIPT_URL_COMMENTI),
-  fetch(SCRIPT_URL_PREFERITI + "?action=getPreferiti&utente=" + encodeURIComponent(myName))
-]);
+   
 
+    const [resLocali, resCommenti] = await Promise.all([
+      fetch(SCRIPT_URL_LOCALI),
+      fetch(SCRIPT_URL_COMMENTI)
+    ]);
 
     locali = await resLocali.json();
     const commenti = await resCommenti.json();
-    const preferiti = await resPreferiti.json();
 
-    console.log("Locali:", locali.length, "Commenti:", commenti.length, "Preferiti:", preferiti.length);
-
-    // collega i commenti ai rispettivi locali
+    // associa i commenti ai locali
+    locali.forEach(l => l.commenti = []);
     commenti.forEach(c => {
-      const loc = locali.find(l =>
-        l.nome === c.locale &&
-        l.zona === c.zona
-      );
+     const loc = locali.find(l =>
+  l.nome.trim().toLowerCase() === c.locale.trim().toLowerCase() &&
+  l.zona.trim().toLowerCase() === c.zona.trim().toLowerCase()
+);
+
       if (loc) {
-        if (!loc.commenti) loc.commenti = [];
         loc.commenti.push({
           autore: c.autore,
           data: c.data,
@@ -516,54 +497,51 @@ const [resLocali, resCommenti, resPreferiti] = await Promise.all([
       }
     });
 
-    // segna i preferiti dell’utente corrente
-    locali.forEach(l => {
-      const pref = preferiti.find(p =>
-        p.nome === l.nome &&
-        p.zona === l.zona &&
-        p.utente.trim().toLowerCase() === myName.trim().toLowerCase() &&
-        p.stato === "si"
-      );
-      l.preferito = pref ? "si" : "no";
-    });
-
     mostra();
+
   } catch (err) {
     console.error("Errore caricamento dati:", err);
-    mostraPopup("Errore ❌", "Impossibile caricare i dati dal server.");
   } finally {
     nascondiLoader();
   }
 }
-async function caricaDati() {
-  try {
-    const res = await fetch(SCRIPT_URL_LOCALI + "?action=getLocali");
-    const datiLocali = await res.json();
-    const preferiti = await caricaPreferiti();
 
-    // Unione dei due dataset
-    locali = datiLocali.map(loc => {
-      const pref = preferiti.find(p => 
-        p.nome === loc.nome && p.zona === loc.zona && p.stato === "si"
-      );
-      return { ...loc, preferito: pref ? "si" : "no" };
-    });
+function mostra(filtrati = locali) {
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
 
-    mostra();
-  } catch (err) {
-    console.error("Errore caricamento dati:", err);
+  if (filtrati.length === 0) {
+    lista.innerHTML = "<p style='text-align:center;color:#999;'>Nessun locale trovato</p>";
+    return;
   }
-}
 
-async function caricaPreferiti() {
-  try {
-    const res = await fetch(SCRIPT_URL_PREFERITI + "?action=getPreferiti&utente=" + encodeURIComponent(myName));
-    const dati = await res.json();
-    return dati; // [{ nome: "Circolo Aurora", zona: "San Frediano", stato: "si" }, ...]
-  } catch (e) {
-    console.error("Errore caricamento preferiti:", e);
-    return [];
-  }
+  filtrati.forEach((l, idxGlobale) => {
+    const numCommenti = l.commenti ? l.commenti.length : 0;
+    const key = l.nome.trim().toLowerCase() + "|" + l.zona.trim().toLowerCase();
+    const isPref = preferiti.includes(key);
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.idx = idxGlobale;
+
+    card.innerHTML = `
+      <div>
+        <strong>${l.nome}</strong><br>
+        <small>${l.zona}</small><br>
+        <span>${l.tipo}</span><br>
+        ${l.voto ? `⭐ ${l.voto}` : ""}
+      </div>
+      <div class="actions">
+        <button class="star ${isPref ? "preferito" : ""}" onclick="togglePreferito('${l.nome}', '${l.zona}')">★</button>
+        <div class="comment-container">
+          <span class="comment-count">${numCommenti}</span>
+          <button class="comment" title="Commenti" onclick="apriCommenti(${idxGlobale})">💬</button>
+        </div>
+      </div>
+    `;
+
+    lista.appendChild(card);
+  });
 }
 
 function mostraPopup(titolo, messaggio) {
@@ -730,61 +708,12 @@ creaDropdown("zonaFilter", "Tutte le zone", zone.map(z => z === "__vicina__" ? "
       if (!e.target.closest(".menu")) document.querySelectorAll(".menu").forEach(m => m.classList.remove("show"));
     });
 
-function mostra(lista = locali) {
-  aggiornaFiltri();
-  const c = document.getElementById("lista");
-  c.innerHTML = "";
-
-  lista.forEach((loc) => {
-    const idxGlobale = locali.findIndex(x =>
-      x.nome === loc.nome &&
-      x.zona === loc.zona &&
-      (x.consigliatoDa || "—") === (loc.consigliatoDa || "—")
-    );
-
-    // Controlli permessi
-    const isOwner = (loc.consigliatoDa || "").trim().toLowerCase() === myName.trim().toLowerCase();
-    const isAdmin = myName.trim().toLowerCase() === "mauro di girolamo";
-
-    // Conteggio commenti
-    const numCommenti = loc.commenti ? loc.commenti.length : 0;
-
-    // Costruzione HTML
-    c.innerHTML += `
-     <div class="card" data-idx="${idxGlobale}">
-  <div>
-
-          <strong>${loc.nome}</strong> ${loc.glutenFree === "si" ? "🌾🚫" : ""}<br>
-          Zona: ${loc.zona} <br>
-          Tipo: ${loc.tipo} <br>
-          Voto: ${loc.voto || "—"}<br>
-          Consigliato da: ${loc.consigliatoDa || "—"}<br>
-          <a href="${loc.link}" target="_blank">Link</a>
-        </div>
-<div class="actions">
-  <button class="star ${loc.preferito === 'si' ? 'preferito' : ''}" onclick="togglePreferito(${idxGlobale})">
-    ★
-  </button>
-
-  ${(isOwner || isAdmin)
-    ? `
-      <button class="edit" onclick="modifica(${idxGlobale})">✎</button>
-      <button class="remove" onclick="rimuovi(${idxGlobale})">×</button>
-    `
-    : ""
-  }
-
-  <div class="comment-container">
-    <button class="comment" title="Commenti" onclick="apriCommenti(${idxGlobale})">💬</button>
-    <span class="comment-count">${numCommenti}</span>
-  </div>
-</div>
-
-
-      </div>
-    `;
-  });
+// Controlla se un locale è nei preferiti
+function isPreferito(nome, zona) {
+  const key = nome.trim().toLowerCase() + "|" + zona.trim().toLowerCase();
+  return preferiti.includes(key);
 }
+
 
 
 // Funzione per ottenere latitudine e longitudine da una zona
@@ -1063,48 +992,6 @@ async function rimuovi(i) {
   }
 }
 
-async function togglePreferito(i) {
-  const loc = locali[i];
-  const nuovoStato = (loc.preferito === 'si') ? 'no' : 'si';
-  loc.preferito = nuovoStato;
-
-  const card = document.querySelector(`.card[data-idx="${i}"]`);
-  const starEl = card?.querySelector(".star");
-  if (starEl) {
-    starEl.classList.toggle("preferito", nuovoStato === "si");
-  }
-
-  // ✅ payload coerente con lo Sheet
-  const payload = {
-    action: "toggle",
-    utente: myName,
-    nome: loc.nome,
-    stato: nuovoStato,
-    zona: loc.zona
-  };
-
-  try {
-    const res = await fetch(SCRIPT_URL_PREFERITI, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const text = await res.text();
-    console.log("Risposta server:", text);
-
-    // se vuoi un feedback visivo in caso di errore
-    const data = JSON.parse(text);
-    if (data.result !== "OK") {
-      throw new Error(data.message || "Errore dal server");
-    }
-
-  } catch (err) {
-    console.error("Errore salvataggio preferito:", err);
-    mostraPopup("Errore ❌", "Problema nel salvataggio del preferito (" + err.message + ")");
-  }
-}
-
 
 
     // --- Commento ---
@@ -1288,7 +1175,13 @@ nascondiLoader(); // 👈 nascondi il loader appena finito di calcolare la zona 
     ) &&
     (gf.length === 0 || gf.includes(l.glutenFree))
   );
+const soloPref = document.getElementById("filtroPreferiti").checked;
+const fFinale = soloPref
+  ? f.filter(l => isPreferito(l.nome, l.zona))
+  : f;
 
+mostra(fFinale);
+return;
   mostra(f);
 }
 
@@ -1388,22 +1281,28 @@ nascondiLoader(); // 👈 nascondi il loader appena finito di calcolare la zona 
 function chiudiPopupAggiunto() {
   document.getElementById("popupAggiunto").style.display = "none";
 }
-caricaZone();
-  carica(); 
-  </script>
+(async () => {
+  mostraLoader();
 
-   
+  await caricaZone();
+  await caricaPreferitiDaSheet();
+  await carica();
 
-  <!-- Service worker -->
-  <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('Service Worker registrato'))
-        .catch(err => console.log('Errore Service Worker:', err));
-    });
-  }
-  </script>
+  aggiornaFiltri(); // 👈 serve per creare i menu filtro
+  nascondiLoader();
+})();
+</script>
+
+<!-- Service worker -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('Service Worker registrato'))
+      .catch(err => console.log('Errore Service Worker:', err));
+  });
+}
+</script>
 
   <!-- Pulsante installa PWA -->
   <script>
@@ -1431,6 +1330,8 @@ caricaZone();
 
 </body>
 </html>
+
+
 
 
 
